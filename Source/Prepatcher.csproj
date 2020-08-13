@@ -1,0 +1,84 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+	<LangVersion>8.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <OutputPath>..\Assemblies\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <DebugType>None</DebugType>
+    <ReleaseVersion>0.4.8</ReleaseVersion>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    
+    <!-- Nuget dependencies -->
+	<PackageReference Include="dnlib" Version="3.3.2" />
+    <PackageReference Include="Publicise.MSBuild.Task" Version="1.*" />
+    <PackageReference Include="Lib.Harmony" Version="2.0.1">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+    
+    <!-- Local dependencies -->
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\mscorlib_public.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp-firstpass">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp-firstpass.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp_public">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp_public.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.IMGUIModule">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.IMGUIModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="UnityEngine.AudioModule">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    
+  </ItemGroup>
+  
+  <ItemGroup>
+    <None Remove=".editorconfig" />
+  </ItemGroup>
+  
+  <Target Name="Publicise" BeforeTargets="BeforeBuild">
+    <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
+  </Target>
+  
+  <Target Name="Publicise" BeforeTargets="BeforeBuild">
+    <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\mscorlib.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
+  </Target>
+  
+  <Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
+    <ItemGroup>
+      <ReferencePath Condition="'%(FileName)' == 'Ionic.Zip.Reduced'">
+        <Aliases>zip</Aliases>
+      </ReferencePath>
+    </ItemGroup>
+  </Target>
+  
+</Project>
