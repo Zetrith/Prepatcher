@@ -39,6 +39,17 @@ namespace Prepatcher
             DomainPtr = mono_domain_get();
         }
 
+        public static string OSSpecifics()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "Resources/Data/Managed";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return "Managed";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "Managed";
+            return null;
+        }
+
         private static void BindMethods(string postfix)
         {
             foreach (var method in Type.GetType(typeof(Native).FullName + postfix).GetMethods())
