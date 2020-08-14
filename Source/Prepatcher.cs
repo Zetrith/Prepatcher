@@ -85,45 +85,13 @@ namespace Prepatcher
 
             SetReflectionOnly(origAsm, true);
 
-            var stream = new MemoryStream();
+            MemoryStream stream;
 
             if (existingCrc != fieldCrc)
             {
                 Log.Message("Prepatcher: baking a new assembly");
-
-                using (var dnOrigAsm = ModuleDefMD.Load(assemblyCSharpBytes, new ModuleContext(new AssemblyResolver())))
-                {
-                    var dnCrcField = new FieldDefUser(
-                        PrepatcherMarkerField,
-                        new FieldSig(dnOrigAsm.CorLibTypes.Int32),
-                        dnlib.DotNet.FieldAttributes.Static
-                    );
-
-                    dnOrigAsm.Find("Verse.Game", false).Fields.Add(dnCrcField);
-
-                    foreach (var fieldToAdd in fieldsToAdd)
-                    {
-                        var fieldType = GenTypes.GetTypeInAnyAssembly(fieldToAdd.Item2);
-                        Log.Message($"Adding field {fieldToAdd.Item1} of type {fieldType.ToStringSafe()}/{fieldToAdd.Item2} in type {fieldToAdd.Item3}");
-
-                        var dnNewField = new FieldDefUser(
-                            fieldToAdd.Item1,
-                            new FieldSig(dnOrigAsm.ImportAsTypeSig(fieldType)),
-                            dnlib.DotNet.FieldAttributes.Public
-                        );
-
-                        dnOrigAsm.Find(fieldToAdd.Item3, false).Fields.Add(dnNewField);
-                    }
-
-                    Log.Message("Added fields");
-
-                    var opts = new dnlib.DotNet.Writer.ModuleWriterOptions(dnOrigAsm);
-                    opts.MetadataOptions.Flags |= dnlib.DotNet.Writer.MetadataFlags.PreserveAll;
-
-                    dnOrigAsm.Write(stream);
-                    dnOrigAsm.Write(DataPath(AssemblyCSharpCached));
-                    File.WriteAllText(DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
-                }
+                BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream = new MemoryStream());
+                File.WriteAllText(DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
             }
             else
             {
@@ -203,6 +171,41 @@ namespace Prepatcher
             Log.Message("Zzz...");
 
             Thread.Sleep(Timeout.Infinite);
+        }
+
+        static void BakeAsm(byte[] asmCSharp, List<(string, string, string)> fieldsToAdd, Stream writeTo)
+        {
+            using var dnOrigAsm = ModuleDefMD.Load(asmCSharp, new ModuleContext(new AssemblyResolver()));
+
+            var dnCrcField = new FieldDefUser(
+                PrepatcherMarkerField,
+                new FieldSig(dnOrigAsm.CorLibTypes.Int32),
+                dnlib.DotNet.FieldAttributes.Static
+            );
+
+            dnOrigAsm.Find("Verse.Game", false).Fields.Add(dnCrcField);
+
+            foreach (var fieldToAdd in fieldsToAdd)
+            {
+                var fieldType = GenTypes.GetTypeInAnyAssembly(fieldToAdd.Item2);
+                Log.Message($"Adding field {fieldToAdd.Item1} of type {fieldType.ToStringSafe()}/{fieldToAdd.Item2} in type {fieldToAdd.Item3}");
+
+                var dnNewField = new FieldDefUser(
+                    fieldToAdd.Item1,
+                    new FieldSig(dnOrigAsm.ImportAsTypeSig(fieldType)),
+                    dnlib.DotNet.FieldAttributes.Public
+                );
+
+                dnOrigAsm.Find(fieldToAdd.Item3, false).Fields.Add(dnNewField);
+            }
+
+            Log.Message("Added fields");
+
+            var opts = new dnlib.DotNet.Writer.ModuleWriterOptions(dnOrigAsm);
+            opts.MetadataOptions.Flags |= dnlib.DotNet.Writer.MetadataFlags.PreserveAll;
+
+            dnOrigAsm.Write(writeTo);
+            dnOrigAsm.Write(DataPath(AssemblyCSharpCached));
         }
 
         static string DataPath(string file)

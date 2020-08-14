@@ -85,4 +85,21 @@ namespace Prepatcher
         [DllImport(MonoLib)]
         public static extern IntPtr mono_domain_get();
     }
+
+    static partial class NativeOSX
+    {
+        const string MonoLib = "libmonobdwgc-2.0.dylib";
+
+        [DllImport(MonoLib)]
+        public static extern void mono_install_assembly_search_hook(IntPtr func, IntPtr data);
+
+        [DllImport(MonoLib)]
+        public static extern IntPtr mono_assembly_name_get_name(IntPtr aname);
+
+        [DllImport(MonoLib)]
+        public static extern IntPtr mono_assembly_get_name(IntPtr aname);
+
+        [DllImport(MonoLib)]
+        public static extern IntPtr mono_domain_get();
+    }
 }
