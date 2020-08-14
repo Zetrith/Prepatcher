@@ -34,7 +34,8 @@ namespace Prepatcher
         const string AssemblyCSharp = "Assembly-CSharp.dll";
         const string AssemblyCSharpCached = "Assembly-CSharp_prepatched.dll";
         const string AssemblyCSharpCachedHash = "Assembly-CSharp_prepatched.hash";
-        const string ManagedFolder = "Managed";
+
+        public static string ManagedFolder = Native.OSSpecifics();
 
         public PrepatcherMod(ModContentPack content) : base(content)
         {
@@ -46,6 +47,7 @@ namespace Prepatcher
                     existingCrc = int.Parse(File.ReadAllText(DataPath(AssemblyCSharpCachedHash), Encoding.UTF8));
                 }
                 catch { }
+
 
             var assemblyCSharpBytes = File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharp));
             var fieldsToAdd = new List<(string, string, string)>();
