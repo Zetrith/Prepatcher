@@ -20,6 +20,14 @@ using Verse;
 
 namespace Prepatcher
 {
+    public class NewFieldData
+    {
+        public string name;
+        public string ofType;
+        public string inType;
+        public bool isStatic;
+    }
+
     public class PrepatcherMod : Mod
     {
         public static Harmony harmony = new Harmony("prepatcher");
@@ -50,7 +58,7 @@ namespace Prepatcher
 
 
             var assemblyCSharpBytes = File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharp));
-            var fieldsToAdd = new List<(string, string, string)>();
+            var fieldsToAdd = new List<NewFieldData>();
             int fieldCrc = new CRC32().GetCrc32(new MemoryStream(assemblyCSharpBytes));
 
             foreach (var mod in LoadedModManager.RunningModsListForReading)
@@ -62,16 +70,22 @@ namespace Prepatcher
                     {
                         foreach (var f in ass.xmlDoc["Fields"])
                         {
-                            Log.Message($"Prepatcher found new field {((XmlElement)f).Attributes["Name"].Value}");
+                            Log.Message($"Prepatcher XML: found new field {((XmlElement)f).Attributes["Name"].Value}");
 
-                            fieldsToAdd.Add((
-                                ((XmlElement)f).Attributes["Name"].Value,
-                                ((XmlElement)f).Attributes["OfType"].Value,
-                                ((XmlElement)f).Attributes["InType"].Value
-                            ));
+                            bool.TryParse(((XmlElement)f).Attributes["IsStatic"]?.Value, out bool isStatic);
+
+                            fieldsToAdd.Add(
+                                new NewFieldData()
+                                {
+                                    name = ((XmlElement)f).Attributes["Name"].Value,
+                                    ofType = ((XmlElement)f).Attributes["OfType"].Value,
+                                    inType = ((XmlElement)f).Attributes["InType"].Value,
+                                    isStatic = isStatic
+                                }
+                            );
                         }
 
-                        fieldCrc = Gen.HashCombineInt(fieldCrc, new CRC32().GetCrc32(new MemoryStream(Encoding.UTF8.GetBytes(ass.xmlDoc.InnerText))));
+                        fieldCrc = Gen.HashCombineInt(fieldCrc, new CRC32().GetCrc32(new MemoryStream(Encoding.UTF8.GetBytes(ass.xmlDoc.InnerXml))));
                     }
                 }
             }
@@ -175,7 +189,7 @@ namespace Prepatcher
             Thread.Sleep(Timeout.Infinite);
         }
 
-        static void BakeAsm(byte[] asmCSharp, List<(string, string, string)> fieldsToAdd, Stream writeTo)
+        static void BakeAsm(byte[] asmCSharp, List<NewFieldData> fieldsToAdd, Stream writeTo)
         {
             using var dnOrigAsm = ModuleDefMD.Load(asmCSharp, new ModuleContext(new AssemblyResolver()));
 
@@ -189,16 +203,19 @@ namespace Prepatcher
 
             foreach (var fieldToAdd in fieldsToAdd)
             {
-                var fieldType = GenTypes.GetTypeInAnyAssembly(fieldToAdd.Item2);
-                Log.Message($"Adding field {fieldToAdd.Item1} of type {fieldType.ToStringSafe()}/{fieldToAdd.Item2} in type {fieldToAdd.Item3}");
+                var fieldType = GenTypes.GetTypeInAnyAssembly(fieldToAdd.ofType);
+                Log.Message($"Patching in a new field {fieldToAdd.name} of type {fieldType.ToStringSafe()}/{fieldToAdd.ofType} in type {fieldToAdd.inType}");
 
                 var dnNewField = new FieldDefUser(
-                    fieldToAdd.Item1,
+                    fieldToAdd.name,
                     new FieldSig(dnOrigAsm.ImportAsTypeSig(fieldType)),
                     dnlib.DotNet.FieldAttributes.Public
                 );
 
-                dnOrigAsm.Find(fieldToAdd.Item3, false).Fields.Add(dnNewField);
+                if (fieldToAdd.isStatic)
+                    dnNewField.Attributes |= dnlib.DotNet.FieldAttributes.Static;
+
+                dnOrigAsm.Find(fieldToAdd.inType, false).Fields.Add(dnNewField);
             }
 
             Log.Message("Added fields");
