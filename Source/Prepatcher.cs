@@ -72,7 +72,7 @@ namespace Prepatcher
                         {
                             Log.Message($"Prepatcher XML: found new field {((XmlElement)f).Attributes["Name"].Value}");
 
-                            bool.TryParse(((XmlElement)f).Attributes["IsStatic"]?.Value, out bool isStatic);
+                            bool.TryParse(((XmlElement)f).Attributes["IsStatic"]?.Value?.ToLowerInvariant(), out bool isStatic);
 
                             fieldsToAdd.Add(
                                 new NewFieldData()
@@ -199,7 +199,7 @@ namespace Prepatcher
                 dnlib.DotNet.FieldAttributes.Static
             );
 
-            dnOrigAsm.Find("Verse.Game", false).Fields.Add(dnCrcField);
+            dnOrigAsm.Find("Verse.Game", true).Fields.Add(dnCrcField);
 
             foreach (var fieldToAdd in fieldsToAdd)
             {
@@ -215,7 +215,7 @@ namespace Prepatcher
                 if (fieldToAdd.isStatic)
                     dnNewField.Attributes |= dnlib.DotNet.FieldAttributes.Static;
 
-                dnOrigAsm.Find(fieldToAdd.inType, false).Fields.Add(dnNewField);
+                dnOrigAsm.Find(fieldToAdd.inType, true).Fields.Add(dnNewField);
             }
 
             Log.Message("Added fields");
