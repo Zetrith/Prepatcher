@@ -4,9 +4,9 @@
   <name>Prepatcher</name>
   <supportedVersions>
     <li>1.1</li>
+	<li>1.2</li>
   </supportedVersions>
   <author>Zetrith</author>
-  <description>RimWorld mod</description>
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>
@@ -16,8 +16,9 @@
     </li>
   </modDependencies>
   <loadAfter>
-    <li>Ludeon.RimWorld</li>
-    <li>Ludeon.RimWorld.Royalty</li>
     <li>brrainz.harmony</li>
   </loadAfter>
+  <loadBefore>
+	<li>Ludeon.RimWorld</li>
+  </loadBefore>
 </ModMetaData>
