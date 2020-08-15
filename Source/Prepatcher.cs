@@ -19,22 +19,6 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 
 namespace Prepatcher
 {
-    public class NewFieldData
-    {
-        public static readonly object DEFAULT_VALUE_NEW_CTOR = new object();
-
-        public string name;
-        public string fieldType;
-        public string targetType;
-        public bool isStatic;
-        public object defaultValue; // This is default(fieldType), not null for value types
-
-        public override string ToString()
-        {
-            return $"public{(isStatic ? " static" : "")} {fieldType.ToStringSafe()} {targetType.ToStringSafe()}:{name.ToStringSafe()} = {(defaultValue == DEFAULT_VALUE_NEW_CTOR ? "new()" : defaultValue.ToStringSafe())};";
-        }
-    }
-
     public class PrepatcherMod : Mod
     {
         public static Harmony harmony = new Harmony("prepatcher");
@@ -436,6 +420,22 @@ namespace Prepatcher
         static void Info(string msg) => Log.Message($"Prepatcher: {msg}");
         static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}");
         static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}");
+    }
+
+    public class NewFieldData
+    {
+        public static readonly object DEFAULT_VALUE_NEW_CTOR = new object();
+
+        public string name;
+        public string fieldType;
+        public string targetType;
+        public bool isStatic;
+        public object defaultValue; // This is default(fieldType), not null for value types
+
+        public override string ToString()
+        {
+            return $"public{(isStatic ? " static" : "")} {fieldType.ToStringSafe()} {targetType.ToStringSafe()}:{name.ToStringSafe()} = {(defaultValue == DEFAULT_VALUE_NEW_CTOR ? "new()" : defaultValue.ToStringSafe())};";
+        }
     }
 
     public static class Extensions
