@@ -25,6 +25,7 @@ namespace Prepatcher
 
         static FieldInfo MonoAssemblyField = AccessTools.Field(typeof(Assembly), "_mono_assembly");
 
+        static Assembly origAsm;
         static Assembly newAsm;
         static IntPtr newAsmPtr;
         static IntPtr newAsmName;
@@ -34,23 +35,17 @@ namespace Prepatcher
         const string AssemblyCSharpCached = "Assembly-CSharp_prepatched.dll";
         const string AssemblyCSharpCachedHash = "Assembly-CSharp_prepatched.hash";
 
-        public static string ManagedFolder = Native.OSSpecifics();
+        public static string ManagedFolder = Native.ManagedFolder();
 
         public PrepatcherMod(ModContentPack content) : base(content)
         {
-            int existingCrc = 0;
-
-            if (File.Exists(DataPath(AssemblyCSharpCached)) && File.Exists(DataPath(AssemblyCSharpCachedHash)))
-                try
-                {
-                    existingCrc = int.Parse(File.ReadAllText(DataPath(AssemblyCSharpCachedHash), Encoding.UTF8));
-                }
-                catch { }
-
+            int existingCrc = GetExistingCRC();
             var assemblyCSharpBytes = File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharp));
 
-            (int fieldCrc, List<NewFieldData> fieldsToAdd) =
-                CollectFields(new CRC32().GetCrc32(new MemoryStream(assemblyCSharpBytes)));
+            List<NewFieldData> fieldsToAdd = CollectFields(
+                new CRC32().GetCrc32(new MemoryStream(assemblyCSharpBytes)),
+                out int fieldCrc
+            );
 
             Info($"CRCs: {existingCrc} {fieldCrc}, refonlys: {AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies().Length}");
 
@@ -62,7 +57,7 @@ namespace Prepatcher
 
             Native.EarlyInit();
 
-            var origAsm = typeof(Game).Assembly;
+            origAsm = typeof(Game).Assembly;
             SetReflectionOnly(origAsm, true);
 
             MemoryStream stream;
@@ -80,12 +75,35 @@ namespace Prepatcher
             }
 
             newAsm = Assembly.Load(stream.ToArray());
-
             newAsmPtr = (IntPtr)MonoAssemblyField.GetValue(newAsm);
             newAsmName = Native.mono_assembly_get_name(newAsmPtr);
 
             SetReflectionOnly(origAsm, false);
 
+            DoHarmonyPatches();
+
+            Info("Setting refonly");
+
+            SetAllRefOnly();
+
+            foreach (var mod in LoadedModManager.RunningModsListForReading)
+                mod.assemblies.ReloadAll();
+
+            doneLoading = true;
+
+            Info("Zzz...");
+
+            try
+            {
+                Thread.Sleep(Timeout.Infinite);
+            } catch(ThreadAbortException)
+            {
+                Info("Aborting the loading thread. This is harmless.");
+            }
+        }
+
+        static void DoHarmonyPatches()
+        {
             Info("Patching Start");
 
             harmony.Patch(
@@ -114,9 +132,10 @@ namespace Prepatcher
                 origAsm.GetType("Verse.Root_Entry").GetMethod("Update"),
                 new HarmonyMethod(typeof(PrepatcherMod), nameof(RootUpdatePrefix))
             );
+        }
 
-            Info("Setting refonly");
-
+        static void SetAllRefOnly()
+        {
             SetReflectionOnly(origAsm, true);
 
             var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
@@ -143,28 +162,23 @@ namespace Prepatcher
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 foreach (var modAsm in mod.assemblies.loadedAssemblies)
                     SetReflectionOnly(modAsm, true);
+        }
 
-            foreach (var mod in LoadedModManager.RunningModsListForReading)
-                mod.assemblies.ReloadAll();
+        static int GetExistingCRC()
+        {
+            if (!File.Exists(DataPath(AssemblyCSharpCached)) || !File.Exists(DataPath(AssemblyCSharpCachedHash)))
+                return 0;
 
-            doneLoading = true;
-
-            Info("Zzz...");
-
-            try
-            {
-                Thread.Sleep(Timeout.Infinite);
-            } catch(ThreadAbortException)
-            {
-                Info("Aborting the loading thread. This is harmless.");
-            }
+            try { return int.Parse(File.ReadAllText(DataPath(AssemblyCSharpCachedHash), Encoding.UTF8)); }
+            catch { return 0; }
         }
 
         const string FieldsXmlFile = "Fields.xml";
         const string PrepatchesFolder = "Prepatches";
 
-        static (int, List<NewFieldData>) CollectFields(int fieldCrc)
+        static List<NewFieldData> CollectFields(int inCrc, out int outCrc)
         {
+            outCrc = inCrc;
             var fieldsToAdd = new List<NewFieldData>();
 
             foreach (var mod in LoadedModManager.RunningModsListForReading)
@@ -189,11 +203,11 @@ namespace Prepatcher
                         }
                     }
 
-                    fieldCrc = Gen.HashCombineInt(fieldCrc, new CRC32().GetCrc32(new MemoryStream(Encoding.UTF8.GetBytes(ass.xmlDoc.InnerXml))));
+                    outCrc = Gen.HashCombineInt(outCrc, new CRC32().GetCrc32(new MemoryStream(Encoding.UTF8.GetBytes(ass.xmlDoc.InnerXml))));
                 }
             }
 
-            return (fieldCrc, fieldsToAdd);
+            return fieldsToAdd;
         }
 
         const string NameAttr = "Name";

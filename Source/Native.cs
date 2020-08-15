@@ -39,7 +39,7 @@ namespace Prepatcher
             DomainPtr = mono_domain_get();
         }
 
-        public static string OSSpecifics()
+        public static string ManagedFolder()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 return "Resources/Data/Managed";
