@@ -6,19 +6,29 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using System.Xml;
-using dnlib.DotNet;
-using dnlib.DotNet.Emit;
 using HarmonyLib;
 using Ionic.Crc;
 using Microsoft.Reflection;
+using Mono.Cecil;
+using Mono.Cecil.Cil;
+using Mono.Cecil.Rocks;
 using UnityEngine;
 using Verse;
-using dnOpCode = dnlib.DotNet.Emit.OpCode;
-using dnOpCodes = dnlib.DotNet.Emit.OpCodes;
+using cecilOpCodes = Mono.Cecil.Cil.OpCodes;
+using cecilOpCode = Mono.Cecil.Cil.OpCode;
 using OpCodes = System.Reflection.Emit.OpCodes;
+using System.Collections;
 
 namespace Prepatcher
 {
+    [StaticConstructorOnStartup]
+    static class PrepatcherStatic
+    {
+        static PrepatcherStatic()
+        {
+        }
+    }
+
     public class PrepatcherMod : Mod
     {
         public static Harmony harmony = new Harmony("prepatcher");
@@ -27,8 +37,6 @@ namespace Prepatcher
 
         static Assembly origAsm;
         static Assembly newAsm;
-        static IntPtr newAsmPtr;
-        static IntPtr newAsmName;
 
         const string PrepatcherMarkerField = "PrepatcherMarker";
         const string AssemblyCSharp = "Assembly-CSharp.dll";
@@ -38,6 +46,22 @@ namespace Prepatcher
         public static string ManagedFolder = Native.ManagedFolder();
 
         public PrepatcherMod(ModContentPack content) : base(content)
+        {
+            if (!DoLoad())
+                return;
+
+            Info("Zzz...");
+
+            try
+            {
+                Thread.Sleep(Timeout.Infinite);
+            } catch(ThreadAbortException)
+            {
+                Info("Aborting the loading thread. This is harmless.");
+            }
+        }
+
+        static bool DoLoad()
         {
             int existingCrc = GetExistingCRC();
             var assemblyCSharpBytes = File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharp));
@@ -52,7 +76,7 @@ namespace Prepatcher
             if (AccessTools.Field(typeof(Game), PrepatcherMarkerField) != null)
             {
                 Info("Restarted with the patched assembly, going silent.");
-                return;
+                return false;
             }
 
             Native.EarlyInit();
@@ -65,7 +89,8 @@ namespace Prepatcher
             if (existingCrc != fieldCrc)
             {
                 Info("Baking a new assembly");
-                BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream = new MemoryStream());
+                stream = new MemoryStream();
+                BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream);
                 File.WriteAllText(DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
             }
             else
@@ -75,8 +100,6 @@ namespace Prepatcher
             }
 
             newAsm = Assembly.Load(stream.ToArray());
-            newAsmPtr = (IntPtr)MonoAssemblyField.GetValue(newAsm);
-            newAsmName = Native.mono_assembly_get_name(newAsmPtr);
 
             SetReflectionOnly(origAsm, false);
 
@@ -91,15 +114,7 @@ namespace Prepatcher
 
             doneLoading = true;
 
-            Info("Zzz...");
-
-            try
-            {
-                Thread.Sleep(Timeout.Infinite);
-            } catch(ThreadAbortException)
-            {
-                Info("Aborting the loading thread. This is harmless.");
-            }
+            return true;
         }
 
         static void DoHarmonyPatches()
@@ -118,7 +133,7 @@ namespace Prepatcher
 
             harmony.Patch(
                 origAsm.GetType("Verse.Root").GetMethod("OnGUI"),
-                transpiler: new HarmonyMethod(typeof(PrepatcherMod), nameof(EmptyTranspiler))
+                new HarmonyMethod(typeof(PrepatcherMod), nameof(RootOnGUIPrefix))
             );
 
             Info("Patching Update");
@@ -254,105 +269,107 @@ namespace Prepatcher
             };
         }
 
-        static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, Stream writeTo)
+        static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, MemoryStream writeTo)
         {
-            using var dnOrigAsm = ModuleDefMD.Load(sourceAsmBytes, new ModuleContext(new AssemblyResolver()));
+            using ModuleDefinition module = ModuleDefinition.ReadModule(new MemoryStream(sourceAsmBytes));
 
-            var dnCrcField = new FieldDefUser(
+            module.GetType("Verse.Game").Fields.Add(new FieldDefinition(
                 PrepatcherMarkerField,
-                new FieldSig(dnOrigAsm.CorLibTypes.Int32),
-                dnlib.DotNet.FieldAttributes.Static
-            );
-
-            dnOrigAsm.Find("Verse.Game", true).Fields.Add(dnCrcField);
+                Mono.Cecil.FieldAttributes.Static,
+                module.TypeSystem.Int32
+            ));
 
             foreach (var newField in fieldsToAdd)
-                AddField(dnOrigAsm, newField);
+                AddField(module, newField);
 
             Info("Added fields");
 
-            var opts = new dnlib.DotNet.Writer.ModuleWriterOptions(dnOrigAsm);
-            opts.MetadataOptions.Flags |= dnlib.DotNet.Writer.MetadataFlags.PreserveAll;
-
-            dnOrigAsm.Write(writeTo);
-            dnOrigAsm.Write(DataPath(AssemblyCSharpCached));
+            module.Write(writeTo);
+            File.WriteAllBytes(DataPath(AssemblyCSharpCached), writeTo.ToArray());
         }
 
-        static void AddField(ModuleDef module, NewFieldData newField)
+        static void AddField(ModuleDefinition module, NewFieldData newField)
         {
             var fieldType = GenTypes.GetTypeInAnyAssembly(newField.fieldType);
-            var dnFieldType = module.Import(fieldType);
+            var ceFieldType = module.ImportReference(fieldType);
 
-            Info($"Patching in a new field {newField.name} of type {dnFieldType.ToStringSafe()}/{newField.fieldType} in type {newField.targetType}");
+            Info($"Patching in a new field {newField.name} of type {ceFieldType.ToStringSafe()}/{newField.fieldType} in type {newField.targetType}");
 
-            var dnNewField = new FieldDefUser(
+            var ceField = new FieldDefinition(
                 newField.name,
-                new FieldSig(dnFieldType.ToTypeSig()),
-                dnlib.DotNet.FieldAttributes.Public
+                Mono.Cecil.FieldAttributes.Public,
+                ceFieldType
             );
 
             if (newField.isStatic)
-                dnNewField.Attributes |= dnlib.DotNet.FieldAttributes.Static;
+                ceField.Attributes |= Mono.Cecil.FieldAttributes.Static;
 
-            var targetType = module.Find(newField.targetType, true);
-            targetType.Fields.Add(dnNewField);
+            var targetType = module.GetType(newField.targetType);
+            targetType.Fields.Add(ceField);
 
             if (!IsNull(newField.defaultValue))
-                WriteFieldInitializers(newField, dnNewField, dnFieldType);
+                WriteFieldInitializers(newField, ceField, ceFieldType, fieldType);
         }
 
-        static void WriteFieldInitializers(NewFieldData newField, FieldDef dnNewField, ITypeDefOrRef dnFieldType)
+        static void WriteFieldInitializers(NewFieldData newField, FieldDefinition dnNewField, TypeReference ceFieldType, Type fieldType)
         {
             var targetType = dnNewField.DeclaringType;
             var i = targetType.Fields.IndexOf(dnNewField);
 
-            foreach (var ctor in targetType.FindInstanceConstructors())
+            foreach (var ctor in targetType.GetConstructors().Where(c => !c.IsStatic))
             {
                 if (CallsAThisCtor(ctor)) continue;
 
                 var insts = ctor.Body.Instructions;
                 int insertAt = -1;
+                int lastValid = -1;
 
                 for (int k = 0; k < insts.Count; k++)
                 {
                     var inst = insts[k];
+                    insertAt = lastValid;
 
-                    if (inst.OpCode == dnOpCodes.Stfld && inst.Operand is FieldDef f && targetType.Fields.IndexOf(f) > i)
+                    if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor)
                         break;
 
-                    if (inst.OpCode == dnOpCodes.Call && inst.Operand is MethodDef m && m.IsConstructor)
-                        break;
+                    if (inst.OpCode == cecilOpCodes.Stfld && inst.Operand is FieldDefinition f)
+                    {
+                        if (targetType.Fields.IndexOf(f) > i)
+                            break;
 
-                    insertAt = k;
+                        lastValid = k;
+                    }
                 }
 
                 insertAt++;
 
+                var ilProc = ctor.Body.GetILProcessor();
+                var insertBefore = insts[insertAt];
+
+                if (!newField.isStatic)
+                    ilProc.InsertBefore(insertBefore, Instruction.Create(cecilOpCodes.Ldarg_0));
+
                 if (newField.defaultValue == NewFieldData.DEFAULT_VALUE_NEW_CTOR)
                 {
-                    insts.Insert(
-                        insertAt,
-                        new Instruction(dnOpCodes.Ldarg_0),
-                        new Instruction(dnOpCodes.Newobj, new MemberRefUser(dnNewField.Module, ".ctor", MethodSig.CreateInstance(dnFieldType.Module.CorLibTypes.Void), dnFieldType)),
-                        new Instruction(dnOpCodes.Stfld, dnNewField)
-                    );
+                    ilProc.InsertBefore(insertBefore, Instruction.Create(cecilOpCodes.Newobj, targetType.Module.ImportReference(fieldType.GetConstructor(new Type[0]))));
                 }
                 else
                 {
-                    insts.Insert(
-                        insertAt,
-                        new Instruction(dnOpCodes.Ldarg_0),
-                        new Instruction(GetConstantOpCode(newField.defaultValue), newField.defaultValue),
-                        new Instruction(dnOpCodes.Stfld, dnNewField)
-                    );
+                    var defaultValueInst = Instruction.Create(cecilOpCodes.Ret);
+                    defaultValueInst.OpCode = GetConstantOpCode(newField.defaultValue).Value;
+                    defaultValueInst.Operand = newField.defaultValue;
+
+                    ilProc.InsertBefore(insertBefore, defaultValueInst); 
                 }
+
+                ilProc.InsertBefore(insertBefore, Instruction.Create(newField.isStatic ? cecilOpCodes.Stsfld : cecilOpCodes.Stfld, dnNewField));
             }
         }
 
-        static bool CallsAThisCtor(MethodDef method)
+        static bool CallsAThisCtor(MethodDefinition method)
         {
             foreach (var inst in method.Body.Instructions)
-                if (inst.OpCode == dnOpCodes.Call && inst.Operand is MethodDef m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
+                if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
                     return true;
             return false;
         }
@@ -362,29 +379,29 @@ namespace Prepatcher
             return val == null || (val.GetType().IsValueType && val == Activator.CreateInstance(val.GetType()));
         }
 
-        static dnOpCode GetConstantOpCode(object c)
+        static cecilOpCode? GetConstantOpCode(object c)
         {
             return GetConstantOpCode(c.GetType());
         }
 
-        static dnOpCode GetConstantOpCode(Type t)
+        static cecilOpCode? GetConstantOpCode(Type t)
         {
             var code = t.GetTypeCode();
 
             if (code >= TypeCode.Boolean && code <= TypeCode.UInt32)
-                return dnOpCodes.Ldc_I4;
+                return cecilOpCodes.Ldc_I4;
 
             if (code >= TypeCode.Int64 && code <= TypeCode.UInt64)
-                return dnOpCodes.Ldc_I8;
+                return cecilOpCodes.Ldc_I8;
 
             if (code == TypeCode.Single)
-                return dnOpCodes.Ldc_R4;
+                return cecilOpCodes.Ldc_R4;
 
             if (code == TypeCode.Double)
-                return dnOpCodes.Ldc_R8;
+                return cecilOpCodes.Ldc_R8;
 
             if (code == TypeCode.String)
-                return dnOpCodes.Ldstr;
+                return cecilOpCodes.Ldstr;
 
             return null;
         }
@@ -395,12 +412,35 @@ namespace Prepatcher
         }
 
         static bool doneLoading;
+        static bool runOnce;
 
-        static bool RootUpdatePrefix()
+        static bool RootUpdatePrefix(Root __instance)
         {
             while (!doneLoading)
                 Thread.Sleep(50);
 
+            if (!runOnce)
+            {
+                // Done to prevent a brief flash of black
+                __instance.StartCoroutine(RecreateAtEndOfFrame());
+                runOnce = true;
+            }
+            else
+            {
+                RecreateComponents();
+            }
+
+            return false;
+        }
+
+        static IEnumerator RecreateAtEndOfFrame()
+        {
+            yield return new WaitForEndOfFrame();
+            RecreateComponents();
+        }
+
+        static void RecreateComponents()
+        {
             // It's important the components are iterated this way to make sure
             // they are recreated in the correct order.
             foreach (var comp in UnityEngine.Object.FindObjectsOfType<Component>())
@@ -410,13 +450,16 @@ namespace Prepatcher
                 comp.gameObject.AddComponent(translation);
                 UnityEngine.Object.Destroy(comp);
             }
-
-            return false;
         }
 
         static IEnumerable<CodeInstruction> EmptyTranspiler(IEnumerable<CodeInstruction> insts)
         {
             yield return new CodeInstruction(OpCodes.Ret);
+        }
+
+        static bool RootOnGUIPrefix()
+        {
+            return true;
         }
 
         // Loading two assemblies with the same name and version isn't possible with Unity's Mono.
