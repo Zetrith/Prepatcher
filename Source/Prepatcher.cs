@@ -8,7 +8,6 @@ using System.Threading;
 using System.Xml;
 using HarmonyLib;
 using Ionic.Crc;
-using Microsoft.Reflection;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
 using Mono.Cecil.Rocks;
@@ -176,7 +175,8 @@ namespace Prepatcher
 
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 foreach (var modAsm in mod.assemblies.loadedAssemblies)
-                    SetReflectionOnly(modAsm, true);
+                    if (!modAsm.GetName().Name.StartsWith("UnityEngine")) // Some mods include Unity's dlls, this is bad
+                        SetReflectionOnly(modAsm, true);
         }
 
         static int GetExistingCRC()
@@ -383,7 +383,7 @@ namespace Prepatcher
 
         static cecilOpCode? GetConstantOpCode(Type t)
         {
-            var code = t.GetTypeCode();
+            var code = Type.GetTypeCode(t);
 
             if (code >= TypeCode.Boolean && code <= TypeCode.UInt32)
                 return cecilOpCodes.Ldc_I4;

@@ -23,7 +23,7 @@
     
     <!-- Local dependencies -->
     <Reference Include="Assembly-CSharp-firstpass">
-      <HintPath>..\..\..\RimWorldWin64_Data\Managed\mscorlib_public.dll</HintPath>
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\mscorlib.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
@@ -67,10 +67,6 @@
   
   <Target Name="Publicise" BeforeTargets="BeforeBuild">
     <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
-  </Target>
-  
-  <Target Name="Publicise" BeforeTargets="BeforeBuild">
-    <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\mscorlib.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
   </Target>
   
   <Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
