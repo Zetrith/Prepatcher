@@ -251,12 +251,19 @@ namespace Prepatcher
             if (fieldTypeType != null)
             {
                 var str = xml.Attributes[DefaultValueAttr]?.Value;
-                if (str == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
-                    defaultValue = NewFieldData.DEFAULT_VALUE_NEW_CTOR;
-                else if (GetConstantOpCode(fieldTypeType) != null)
-                    defaultValue = ParseHelper.FromString(str, fieldTypeType);
-                else if (fieldTypeType.IsValueType)
-                    defaultValue = Activator.CreateInstance(fieldTypeType);
+                if(str != null)
+                {
+                    if (str == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
+                        defaultValue = NewFieldData.DEFAULT_VALUE_NEW_CTOR;
+                    else if (GetConstantOpCode(fieldTypeType) != null)
+                    { 
+                        defaultValue = ParseHelper.FromString(str, fieldTypeType);
+                        if(typeof(bool) == fieldTypeType)
+                            defaultValue = str == "false" ? 0 : 1;
+                    }
+                    else if (fieldTypeType.IsValueType)
+                        defaultValue = Activator.CreateInstance(fieldTypeType);
+                }
             }
 
             return new NewFieldData()
