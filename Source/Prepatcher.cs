@@ -248,15 +248,16 @@ namespace Prepatcher
                 success = false;
 
             object defaultValue = null;
-            if (fieldTypeType != null)
+            var defaultValueStr = xml.Attributes[DefaultValueAttr]?.Value;
+
+            if (fieldTypeType != null && defaultValueStr != null)
             {
-                var str = xml.Attributes[DefaultValueAttr]?.Value;
-                if (str == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
+                if (defaultValueStr == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
                     defaultValue = NewFieldData.DEFAULT_VALUE_NEW_CTOR;
                 else if (GetConstantOpCode(fieldTypeType) != null)
-                    defaultValue = ParseHelper.FromString(str, fieldTypeType);
-                else if (fieldTypeType.IsValueType)
-                    defaultValue = Activator.CreateInstance(fieldTypeType);
+                    defaultValue = ParseHelper.FromString(defaultValueStr, fieldTypeType);
+                else
+                    success = false;
             }
 
             return new NewFieldData()
@@ -307,7 +308,7 @@ namespace Prepatcher
             var targetType = module.GetType(newField.targetType);
             targetType.Fields.Add(ceField);
 
-            if (!IsNull(newField.defaultValue))
+            if (newField.defaultValue != null)
                 WriteFieldInitializers(newField, ceField, ceFieldType, fieldType);
         }
 
@@ -356,8 +357,9 @@ namespace Prepatcher
                 else
                 {
                     var defaultValueInst = Instruction.Create(cecilOpCodes.Ret);
-                    defaultValueInst.OpCode = GetConstantOpCode(newField.defaultValue).Value;
-                    defaultValueInst.Operand = newField.defaultValue;
+                    var op = GetConstantOpCode(newField.defaultValue).Value;
+                    defaultValueInst.OpCode = op;
+                    defaultValueInst.Operand = op == cecilOpCodes.Ldc_I4 ? Convert.ToInt32(newField.defaultValue) : newField.defaultValue;
 
                     ilProc.InsertBefore(insertBefore, defaultValueInst); 
                 }
@@ -372,11 +374,6 @@ namespace Prepatcher
                 if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
                     return true;
             return false;
-        }
-
-        static bool IsNull(object val)
-        {
-            return val == null || (val.GetType().IsValueType && val == Activator.CreateInstance(val.GetType()));
         }
 
         static cecilOpCode? GetConstantOpCode(object c)
@@ -487,11 +484,18 @@ namespace Prepatcher
         public string fieldType;
         public string targetType;
         public bool isStatic;
-        public object defaultValue; // This is default(fieldType), not null for value types
+        public object defaultValue;
 
         public override string ToString()
         {
-            return $"public{(isStatic ? " static" : "")} {fieldType.ToStringSafe()} {targetType.ToStringSafe()}:{name.ToStringSafe()} = {(defaultValue == DEFAULT_VALUE_NEW_CTOR ? "new()" : defaultValue.ToStringSafe())};";
+            return $"public{(isStatic ? " static" : "")} {fieldType.ToStringSafe()} {targetType.ToStringSafe()}:{name.ToStringSafe()}{DefaultValueStr()};";
+        }
+
+        private string DefaultValueStr()
+        {
+            if (defaultValue == null)
+                return "";
+            return $" = {(defaultValue == DEFAULT_VALUE_NEW_CTOR ? "new ()" : defaultValue.ToStringSafe())}";
         }
     }
 
