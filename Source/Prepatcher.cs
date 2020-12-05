@@ -10,7 +10,6 @@ using HarmonyLib;
 using Ionic.Crc;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
-using Mono.Cecil.Rocks;
 using UnityEngine;
 using Verse;
 using cecilOpCodes = Mono.Cecil.Cil.OpCodes;
@@ -19,9 +18,7 @@ using OpCodes = System.Reflection.Emit.OpCodes;
 using System.Collections;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using RimWorld;
-using System.Numerics;
+using Verse.Steam;
 
 namespace Prepatcher
 {
@@ -47,8 +44,6 @@ namespace Prepatcher
         const string AssemblyCSharpCached = "Assembly-CSharp_prepatched.dll";
         const string AssemblyCSharpCachedHash = "Assembly-CSharp_prepatched.hash";
 
-        public static string ManagedFolder = ManagedFolderOS();
-
         public PrepatcherMod(ModContentPack content) : base(content)
         {
             if (!DoLoad())
@@ -68,7 +63,7 @@ namespace Prepatcher
         static bool DoLoad()
         {
             int existingCrc = GetExistingCRC();
-            var assemblyCSharpBytes = File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharp));
+            var assemblyCSharpBytes = File.ReadAllBytes(Util.DataPath(AssemblyCSharp));
 
             List<NewFieldData> fieldsToAdd = CollectFields(
                 new CRC32().GetCrc32(new MemoryStream(assemblyCSharpBytes)),
@@ -100,12 +95,12 @@ namespace Prepatcher
                 Info("Baking a new assembly");
                 stream = new MemoryStream();
                 BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream);
-                File.WriteAllText(DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
+                File.WriteAllText(Util.DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
             }
             else
             {
                 Info("CRC matches, loading cached");
-                stream = new MemoryStream(File.ReadAllBytes(Path.Combine(Application.dataPath, ManagedFolder, AssemblyCSharpCached)));
+                stream = new MemoryStream(File.ReadAllBytes(Util.DataPath(AssemblyCSharpCached)));
             }
 
             newAsm = Assembly.Load(stream.ToArray());
@@ -113,10 +108,16 @@ namespace Prepatcher
             SetReflectionOnly(origAsm, false);
 
             DoHarmonyPatches();
+            UnregisterWorkshopCallbacks();
 
             Info("Setting refonly");
 
-            SetAllRefOnly();
+            ClearAssemblyResolve();
+            SetReflectionOnly(origAsm, true);
+            SetModsRefOnly();
+
+            // This is what RimWorld itself does later
+            AppDomain.CurrentDomain.AssemblyResolve += (o, a) => newAsm;
 
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 mod.assemblies.ReloadAll();
@@ -158,10 +159,15 @@ namespace Prepatcher
             );
         }
 
-        static void SetAllRefOnly()
+        static void UnregisterWorkshopCallbacks()
         {
-            SetReflectionOnly(origAsm, true);
+            Workshop.subscribedCallback?.Unregister();
+            Workshop.unsubscribedCallback?.Unregister();
+            Workshop.installedCallback?.Unregister();
+        }
 
+        static void ClearAssemblyResolve()
+        {
             var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
             var del = (Delegate)asmResolve.GetValue(AppDomain.CurrentDomain);
 
@@ -178,23 +184,31 @@ namespace Prepatcher
                             SetReflectionOnly(da, true);
                         }
                     }
-
-                    Delegate.Remove(del, d);
                 }
             }
 
+            asmResolve.SetValue(AppDomain.CurrentDomain, null);
+        }
+
+        static void SetModsRefOnly()
+        {
+            var dependants = Util.AssembliesDependingOn(
+                LoadedModManager.RunningModsListForReading.SelectMany(m => m.assemblies.loadedAssemblies),
+                 "Assembly-CSharp", "0Harmony"
+            );
+
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 foreach (var modAsm in mod.assemblies.loadedAssemblies)
-                    if (!modAsm.GetName().Name.StartsWith("UnityEngine")) // Some mods include Unity's dlls, this is bad
+                    if (dependants.Contains(modAsm.GetName().Name))
                         SetReflectionOnly(modAsm, true);
         }
 
         static int GetExistingCRC()
         {
-            if (!File.Exists(DataPath(AssemblyCSharpCached)) || !File.Exists(DataPath(AssemblyCSharpCachedHash)))
+            if (!File.Exists(Util.DataPath(AssemblyCSharpCached)) || !File.Exists(Util.DataPath(AssemblyCSharpCachedHash)))
                 return 0;
 
-            try { return int.Parse(File.ReadAllText(DataPath(AssemblyCSharpCachedHash), Encoding.UTF8)); }
+            try { return int.Parse(File.ReadAllText(Util.DataPath(AssemblyCSharpCachedHash), Encoding.UTF8)); }
             catch { return 0; }
         }
 
@@ -232,12 +246,12 @@ namespace Prepatcher
             {
                 var targetType = GenTypes.GetTypeInAnyAssembly(fieldsPerType.Key);
                 var enumType = Enum.GetUnderlyingType(targetType);
-                var max = ToUInt64(enumType.GetField("MaxValue").GetRawConstantValue());
-                var taken = AccessTools.GetDeclaredFields(targetType).Where(f => f.IsLiteral).Select(f => ToUInt64(f.GetRawConstantValue())).ToHashSet();
+                var max = Util.ToUInt64(enumType.GetField("MaxValue").GetRawConstantValue());
+                var taken = AccessTools.GetDeclaredFields(targetType).Where(f => f.IsLiteral).Select(f => Util.ToUInt64(f.GetRawConstantValue())).ToHashSet();
 
                 foreach (var f in fieldsPerType)
                 {
-                    var free = FindNotTaken(f.enumPreferred, max, taken);
+                    var free = Util.FindNotTaken(f.enumPreferred, max, taken);
                     if (free == null)
                     {
                         ErrorXML($"{f.ownerMod}: Couldn't assign a value for {f}");
@@ -245,7 +259,7 @@ namespace Prepatcher
                         continue;
                     }
 
-                    f.defaultValue = FromUInt64(free.Value, enumType);
+                    f.defaultValue = Util.FromUInt64(free.Value, enumType);
                     taken.Add(free.Value);
                 }
             }
@@ -254,38 +268,6 @@ namespace Prepatcher
                 InfoXML($"{f.ownerMod}: Parsed {f}");
 
             return fieldsToAdd;
-        }
-
-        static ulong ToUInt64(object obj)
-        {
-            if (obj is ulong u)
-                return u;
-            return (ulong)Convert.ToInt64(obj);
-        }
-
-        static object FromUInt64(ulong from, Type to) => Type.GetTypeCode(to) switch
-        {
-            TypeCode.Byte => (byte)from,
-            TypeCode.SByte => (sbyte)from,
-            TypeCode.Int16 => (short)from,
-            TypeCode.UInt16 => (ushort)from,
-            TypeCode.Int32 => (int)from,
-            TypeCode.UInt32 => (uint)from,
-            TypeCode.Int64 => (long)from,
-            TypeCode.UInt64 => from,
-            _ => null
-        };
-
-        static ulong? FindNotTaken(ulong start, ulong max, HashSet<ulong> taken)
-        {
-            // TODO maybe wrap around?
-            for (ulong i = start; i <= max; i++)
-            {
-                if (taken.Contains(i)) continue;
-                return i;
-            }
-
-            return null;
         }
 
         const string EnumElement = "Enum";
@@ -320,7 +302,7 @@ namespace Prepatcher
             {
                 if (defaultValueStr == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
                     defaultValue = NewFieldData.DEFAULT_VALUE_NEW_CTOR;
-                else if (GetConstantOpCode(fieldTypeType) != null)
+                else if (Util.GetConstantOpCode(fieldTypeType) != null)
                     defaultValue = ParseHelper.FromString(defaultValueStr, fieldTypeType);
                 else
                     success = false;
@@ -364,7 +346,7 @@ namespace Prepatcher
             Info("Added fields");
 
             module.Write(writeTo);
-            File.WriteAllBytes(DataPath(AssemblyCSharpCached), writeTo.ToArray());
+            File.WriteAllBytes(Util.DataPath(AssemblyCSharpCached), writeTo.ToArray());
         }
 
         static void AddField(ModuleDefinition module, NewFieldData newField)
@@ -403,7 +385,7 @@ namespace Prepatcher
 
             foreach (var ctor in targetType.GetConstructors().Where(c => c.IsStatic == newField.isStatic))
             {
-                if (CallsAThisCtor(ctor)) continue;
+                if (Util.CallsAThisCtor(ctor)) continue;
 
                 var insts = ctor.Body.Instructions;
                 int insertAt = -1;
@@ -441,7 +423,7 @@ namespace Prepatcher
                 else
                 {
                     var defaultValueInst = Instruction.Create(cecilOpCodes.Ret);
-                    var op = GetConstantOpCode(newField.defaultValue).Value;
+                    var op = Util.GetConstantOpCode(newField.defaultValue).Value;
                     defaultValueInst.OpCode = op;
                     defaultValueInst.Operand = op == cecilOpCodes.Ldc_I4 ? Convert.ToInt32(newField.defaultValue) : newField.defaultValue;
 
@@ -450,46 +432,6 @@ namespace Prepatcher
 
                 ilProc.InsertBefore(insertBefore, Instruction.Create(newField.isStatic ? cecilOpCodes.Stsfld : cecilOpCodes.Stfld, ceNewField));
             }
-        }
-
-        static bool CallsAThisCtor(MethodDefinition method)
-        {
-            foreach (var inst in method.Body.Instructions)
-                if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
-                    return true;
-            return false;
-        }
-
-        static cecilOpCode? GetConstantOpCode(object c)
-        {
-            return GetConstantOpCode(c.GetType());
-        }
-
-        static cecilOpCode? GetConstantOpCode(Type t)
-        {
-            var code = Type.GetTypeCode(t);
-
-            if (code >= TypeCode.Boolean && code <= TypeCode.UInt32)
-                return cecilOpCodes.Ldc_I4;
-
-            if (code >= TypeCode.Int64 && code <= TypeCode.UInt64)
-                return cecilOpCodes.Ldc_I8;
-
-            if (code == TypeCode.Single)
-                return cecilOpCodes.Ldc_R4;
-
-            if (code == TypeCode.Double)
-                return cecilOpCodes.Ldc_R8;
-
-            if (code == TypeCode.String)
-                return cecilOpCodes.Ldstr;
-
-            return null;
-        }
-
-        static string DataPath(string file)
-        {
-            return Path.Combine(Application.dataPath, ManagedFolder, file);
         }
 
         static bool doneLoading;
@@ -558,17 +500,6 @@ namespace Prepatcher
         static void Info(string msg) => Log.Message($"Prepatcher: {msg}");
         static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}");
         static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}");
-
-        static string ManagedFolderOS()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "Resources/Data/Managed";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return "Managed";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return "Managed";
-            return null;
-        }
     }
 
     public class NewFieldData
@@ -598,7 +529,7 @@ namespace Prepatcher
         }
     }
 
-    public static class Extensions
+    public static class Util
     {
         public static void Insert<T>(this IList<T> list, int index, params T[] items)
         {
@@ -616,6 +547,128 @@ namespace Prepatcher
             {
                 return null;
             }
+        }
+
+        public static bool CallsAThisCtor(MethodDefinition method)
+        {
+            foreach (var inst in method.Body.Instructions)
+                if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
+                    return true;
+            return false;
+        }
+
+        public static cecilOpCode? GetConstantOpCode(object c)
+        {
+            return GetConstantOpCode(c.GetType());
+        }
+
+        public static cecilOpCode? GetConstantOpCode(Type t)
+        {
+            var code = Type.GetTypeCode(t);
+
+            if (code >= TypeCode.Boolean && code <= TypeCode.UInt32)
+                return cecilOpCodes.Ldc_I4;
+
+            if (code >= TypeCode.Int64 && code <= TypeCode.UInt64)
+                return cecilOpCodes.Ldc_I8;
+
+            if (code == TypeCode.Single)
+                return cecilOpCodes.Ldc_R4;
+
+            if (code == TypeCode.Double)
+                return cecilOpCodes.Ldc_R8;
+
+            if (code == TypeCode.String)
+                return cecilOpCodes.Ldstr;
+
+            return null;
+        }
+
+        public static ulong ToUInt64(object obj)
+        {
+            if (obj is ulong u)
+                return u;
+            return (ulong)Convert.ToInt64(obj);
+        }
+
+        public static object FromUInt64(ulong from, Type to) => Type.GetTypeCode(to) switch
+        {
+            TypeCode.Byte => (byte)from,
+            TypeCode.SByte => (sbyte)from,
+            TypeCode.Int16 => (short)from,
+            TypeCode.UInt16 => (ushort)from,
+            TypeCode.Int32 => (int)from,
+            TypeCode.UInt32 => (uint)from,
+            TypeCode.Int64 => (long)from,
+            TypeCode.UInt64 => from,
+            _ => null
+        };
+
+        public static ulong? FindNotTaken(ulong start, ulong max, HashSet<ulong> taken)
+        {
+            // TODO maybe wrap around?
+            for (ulong i = start; i <= max; i++)
+            {
+                if (taken.Contains(i)) continue;
+                return i;
+            }
+
+            return null;
+        }
+
+        static string ManagedFolderOS()
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                return "Resources/Data/Managed";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return "Managed";
+            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                return "Managed";
+            return null;
+        }
+
+        public static string DataPath(string file)
+        {
+            return Path.Combine(Application.dataPath, ManagedFolderOS(), file);
+        }
+
+        public static IEnumerable<MethodDefinition> GetConstructors(this TypeDefinition self)
+        {
+            return self.Methods.Where(method => method.IsConstructor);
+        }
+
+        public static HashSet<string> AssembliesDependingOn(IEnumerable<Assembly> assemblies, params string[] on)
+        {
+            var dependants = new Dictionary<string, HashSet<string>>();
+
+            foreach (var asm in assemblies)
+                foreach (var reference in asm.GetReferencedAssemblies())
+                {
+                    if (!dependants.TryGetValue(reference.Name, out var set))
+                        dependants[reference.Name] = set = new HashSet<string>();
+
+                    set.Add(asm.GetName().Name);
+                }
+
+            var result = new HashSet<string>();
+            var todo = new Queue<string>();
+
+            foreach (var o in on)
+                todo.Enqueue(o);
+
+            while (todo.Count > 0)
+            {
+                var t = todo.Dequeue();
+                result.Add(t);
+
+                if (!dependants.ContainsKey(t)) continue;
+
+                foreach (var d in dependants[t])
+                    if (!result.Contains(d))
+                        todo.Enqueue(d);
+            }
+
+            return result;
         }
     }
 }

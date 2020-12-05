@@ -15,15 +15,15 @@
   <ItemGroup>
     
     <!-- Nuget dependencies -->
-	<PackageReference Include="Mono.Cecil" Version="0.11.2" />
     <PackageReference Include="Publicise.MSBuild.Task" Version="1.*" />
-    <PackageReference Include="Lib.Harmony" Version="2.0.1">
-      <ExcludeAssets>runtime</ExcludeAssets>
-    </PackageReference>
     
     <!-- Local dependencies -->
     <Reference Include="Assembly-CSharp-firstpass">
       <HintPath>..\..\..\RimWorldWin64_Data\Managed\mscorlib.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="0Harmony_public">
+      <HintPath>..\..\..\RimWorldWin64_Data\Managed\0Harmony_public.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="Assembly-CSharp-firstpass">
@@ -67,6 +67,10 @@
   
   <Target Name="Publicise" BeforeTargets="BeforeBuild">
     <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
+  </Target>
+  
+  <Target Name="Publicise" BeforeTargets="BeforeBuild">
+    <Publicise AssemblyPath="..\..\..\Mods\HarmonyRimWorld\Current\Assemblies\0Harmony.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
   </Target>
   
   <Target Name="ChangeAliasesOfNugetRefs" BeforeTargets="FindReferenceAssembliesForReferences;ResolveReferences">
