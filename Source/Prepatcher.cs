@@ -44,19 +44,20 @@ namespace Prepatcher
         const string AssemblyCSharpCached = "Assembly-CSharp_prepatched.dll";
         const string AssemblyCSharpCachedHash = "Assembly-CSharp_prepatched.hash";
 
+        static int stopLoggingThread = -1;
+
         public PrepatcherMod(ModContentPack content) : base(content)
         {
             if (!DoLoad())
                 return;
 
-            Info("Zzz...");
-
             try
             {
-                Thread.Sleep(Timeout.Infinite);
-            } catch(ThreadAbortException)
+                Thread.CurrentThread.Abort();
+            } catch (ThreadAbortException)
             {
-                Info("Aborting the loading thread. This is harmless.");
+                Prefs.data.resetModsConfigOnCrash = false;
+                stopLoggingThread = Thread.CurrentThread.ManagedThreadId;
             }
         }
 
@@ -122,6 +123,7 @@ namespace Prepatcher
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 mod.assemblies.ReloadAll();
 
+            Info("Done loading");
             doneLoading = true;
 
             return true;
@@ -156,6 +158,11 @@ namespace Prepatcher
             harmony.Patch(
                 origAsm.GetType("Verse.Root_Entry").GetMethod("Update"),
                 new HarmonyMethod(typeof(PrepatcherMod), nameof(RootUpdatePrefix))
+            );
+
+            harmony.Patch(
+                origAsm.GetType("Verse.Log").GetMethod("Error"),
+                new HarmonyMethod(typeof(PrepatcherMod), nameof(LogErrorPrefix))
             );
         }
 
@@ -483,6 +490,11 @@ namespace Prepatcher
         static bool RootOnGUIPrefix()
         {
             return true;
+        }
+
+        static bool LogErrorPrefix()
+        {
+            return Thread.CurrentThread.ManagedThreadId != stopLoggingThread;
         }
 
         // Loading two assemblies with the same name and version isn't possible with Unity's Mono.
