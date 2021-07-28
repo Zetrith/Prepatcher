@@ -19,6 +19,7 @@ using System.Collections;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 using Verse.Steam;
+using System.Diagnostics;
 
 namespace Prepatcher
 {
@@ -61,8 +62,12 @@ namespace Prepatcher
             }
         }
 
+        static bool CheckRestarted() => AccessTools.Field(typeof(Game), PrepatcherMarkerField) != null;
+
         static bool DoLoad()
         {
+            var clock1 = Stopwatch.StartNew();
+
             int existingCrc = GetExistingCRC();
             var assemblyCSharpBytes = File.ReadAllBytes(Util.DataPath(AssemblyCSharp));
 
@@ -73,15 +78,8 @@ namespace Prepatcher
 
             Info($"CRCs: {existingCrc} {fieldCrc}, refonlys: {AppDomain.CurrentDomain.ReflectionOnlyGetAssemblies().Length}");
 
-            if (AccessTools.Field(typeof(Game), PrepatcherMarkerField) != null)
+            if (CheckRestarted())
             {
-                // Actually assign the enum values
-                foreach (var f in fieldsToAdd.Where(f => f.isEnum))
-                {
-                    var targetType = GenTypes.GetTypeInAnyAssembly(f.targetType);
-                    targetType.GetField(f.name).SetValue(null, f.defaultValue);
-                }
-
                 Info($"Restarted with the patched assembly, going silent.");
                 return false;
             }
@@ -93,10 +91,14 @@ namespace Prepatcher
 
             if (existingCrc != fieldCrc)
             {
+                var clock2 = Stopwatch.StartNew();
+
                 Info("Baking a new assembly");
                 stream = new MemoryStream();
                 BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream);
                 File.WriteAllText(Util.DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
+
+                Info($"Baking took: {clock2.ElapsedMilliseconds}");
             }
             else
             {
@@ -125,6 +127,8 @@ namespace Prepatcher
 
             Info("Done loading");
             doneLoading = true;
+
+            Info($"Took: {clock1.ElapsedMilliseconds}");
 
             return true;
         }
@@ -161,7 +165,7 @@ namespace Prepatcher
             );
 
             harmony.Patch(
-                origAsm.GetType("Verse.Log").GetMethod("Error"),
+                origAsm.GetType("Verse.Log").GetMethod("Error", new[] { typeof(string) }),
                 new HarmonyMethod(typeof(PrepatcherMod), nameof(LogErrorPrefix))
             );
         }
@@ -249,35 +253,12 @@ namespace Prepatcher
                 }
             }
 
-            foreach (var fieldsPerType in fieldsToAdd.Where(f => f.isEnum).GroupBy(f => f.targetType))
-            {
-                var targetType = GenTypes.GetTypeInAnyAssembly(fieldsPerType.Key);
-                var enumType = Enum.GetUnderlyingType(targetType);
-                var max = Util.ToUInt64(enumType.GetField("MaxValue").GetRawConstantValue());
-                var taken = AccessTools.GetDeclaredFields(targetType).Where(f => f.IsLiteral).Select(f => Util.ToUInt64(f.GetRawConstantValue())).ToHashSet();
-
-                foreach (var f in fieldsPerType)
-                {
-                    var free = Util.FindNotTaken(f.enumPreferred, max, taken);
-                    if (free == null)
-                    {
-                        ErrorXML($"{f.ownerMod}: Couldn't assign a value for {f}");
-                        fieldsToAdd.Remove(f);
-                        continue;
-                    }
-
-                    f.defaultValue = Util.FromUInt64(free.Value, enumType);
-                    taken.Add(free.Value);
-                }
-            }
-
             foreach (var f in fieldsToAdd)
                 InfoXML($"{f.ownerMod}: Parsed {f}");
 
             return fieldsToAdd;
         }
 
-        const string EnumElement = "Enum";
         const string NameAttr = "Name";
         const string FieldTypeAttr = "FieldType";
         const string TargetTypeAttr = "TargetType";
@@ -289,57 +270,46 @@ namespace Prepatcher
         {
             success = true;
 
-            var isEnum = xml.Name == EnumElement;
             bool.TryParse(xml.Attributes[IsStaticAttr]?.Value?.ToLowerInvariant(), out bool isStatic);
 
-            var targetType = xml.Attributes[TargetTypeAttr]?.Value;
-            Type targetTypeType = null;
-            if (targetType == null || (targetTypeType = GenTypes.GetTypeInAnyAssembly(targetType)) == null)
+            var targetTypeStr = xml.Attributes[TargetTypeAttr]?.Value;
+            Type targetType = null;
+            if (targetTypeStr == null || (targetType = GenTypes.GetTypeInAnyAssembly(targetTypeStr)) == null)
                 success = false;
 
-            var fieldType = isEnum ? targetType : xml.Attributes[FieldTypeAttr]?.Value;
-            Type fieldTypeType = null;
-            if (fieldType == null || (fieldTypeType = GenTypes.GetTypeInAnyAssembly(fieldType)) == null)
+            var fieldTypeStr = xml.Attributes[FieldTypeAttr]?.Value;
+            Type fieldType = null;
+            if (fieldTypeStr == null || (fieldType = GenTypes.GetTypeInAnyAssembly(fieldTypeStr)) == null)
                 success = false;
 
             object defaultValue = null;
             var defaultValueStr = xml.Attributes[DefaultValueAttr]?.Value;
 
-            if (fieldTypeType != null && defaultValueStr != null)
+            if (fieldType != null && defaultValueStr != null)
             {
-                if (defaultValueStr == "new()" && fieldTypeType.GetConstructor(new Type[0]) != null)
+                if (defaultValueStr == "new()" && fieldType.GetConstructor(new Type[0]) != null)
                     defaultValue = NewFieldData.DEFAULT_VALUE_NEW_CTOR;
-                else if (Util.GetConstantOpCode(fieldTypeType) != null)
-                    defaultValue = ParseHelper.FromString(defaultValueStr, fieldTypeType);
+                else if (Util.GetConstantOpCode(fieldType) != null)
+                    defaultValue = ParseHelper.FromString(defaultValueStr, fieldType);
                 else
                     success = false;
-            }
-
-            ulong preferredValue = 1;
-            var preferredValueStr = xml.Attributes[PreferredValueAttr]?.Value;
-            if (preferredValueStr != null)
-            {
-                preferredValue = 
-                    (ulong?)new UInt64Converter().TryConvert(preferredValueStr) ??
-                    (ulong?)(long?)new Int64Converter().TryConvert(preferredValueStr) ??
-                    1;
             }
 
             return new NewFieldData()
             {
                 name = xml.Attributes[NameAttr]?.Value,
-                fieldType = fieldTypeType == null ? null : fieldType,
-                targetType = targetTypeType == null ? null : targetType,
-                isStatic = isStatic | isEnum,
-                defaultValue = defaultValue,
-                isEnum = isEnum,
-                enumPreferred = preferredValue
+                fieldType = fieldType == null ? null : fieldTypeStr,
+                targetType = targetType == null ? null : targetTypeStr,
+                isStatic = isStatic,
+                defaultValue = defaultValue
             };
         }
 
         static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, MemoryStream writeTo)
         {
+            var clock1 = Stopwatch.StartNew();
             using ModuleDefinition module = ModuleDefinition.ReadModule(new MemoryStream(sourceAsmBytes));
+            Info($"Reading took {clock1.ElapsedMilliseconds}");
 
             module.GetType("Verse.Game").Fields.Add(new FieldDefinition(
                 PrepatcherMarkerField,
@@ -352,8 +322,13 @@ namespace Prepatcher
 
             Info("Added fields");
 
+            var clock2 = Stopwatch.StartNew();
             module.Write(writeTo);
+            Info($"Write to memory took {clock2.ElapsedMilliseconds}");
+
+            var clock3 = Stopwatch.StartNew();
             File.WriteAllBytes(Util.DataPath(AssemblyCSharpCached), writeTo.ToArray());
+            Info($"Write to file took {clock3.ElapsedMilliseconds}");
         }
 
         static void AddField(ModuleDefinition module, NewFieldData newField)
@@ -368,12 +343,6 @@ namespace Prepatcher
                 Mono.Cecil.FieldAttributes.Public,
                 ceFieldType
             );
-
-            if (newField.isEnum)
-            {
-                ceField.Attributes |= Mono.Cecil.FieldAttributes.InitOnly | Mono.Cecil.FieldAttributes.HasDefault;
-                ceField.Constant = newField.defaultValue;
-            }
 
             if (newField.isStatic)
                 ceField.Attributes |= Mono.Cecil.FieldAttributes.Static;
@@ -524,12 +493,10 @@ namespace Prepatcher
         public string targetType;
         public bool isStatic;
         public object defaultValue;
-        public bool isEnum;
-        public ulong enumPreferred;
 
         public override string ToString()
         {
-            string modStr = isEnum ? "enum" : $"public{(isStatic ? " static" : "")}";
+            string modStr = $"public{(isStatic ? " static" : "")}";
             return $"{modStr} {fieldType.ToStringSafe()} {targetType.ToStringSafe()}:{name.ToStringSafe()}{DefaultValueStr()};";
         }
 

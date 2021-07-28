@@ -18,7 +18,7 @@
     <PackageReference Include="Publicise.MSBuild.Task" Version="1.*" />
     
     <!-- Local dependencies -->
-    <Reference Include="Assembly-CSharp-firstpass">
+    <Reference Include="mscorlib">
       <HintPath>..\..\..\RimWorldWin64_Data\Managed\mscorlib.dll</HintPath>
       <Private>False</Private>
     </Reference>
@@ -65,11 +65,11 @@
     <None Remove=".editorconfig" />
   </ItemGroup>
   
-  <Target Name="Publicise" BeforeTargets="BeforeBuild">
+  <Target Name="Publicise1" BeforeTargets="BeforeBuild">
     <Publicise AssemblyPath="..\..\..\RimWorldWin64_Data\Managed\Assembly-CSharp.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
   </Target>
   
-  <Target Name="Publicise" BeforeTargets="BeforeBuild">
+  <Target Name="Publicise2" BeforeTargets="BeforeBuild">
     <Publicise AssemblyPath="..\..\..\Mods\HarmonyRimWorld\Current\Assemblies\0Harmony.dll" OutputPath="..\..\..\RimWorldWin64_Data\Managed\" />
   </Target>
   
