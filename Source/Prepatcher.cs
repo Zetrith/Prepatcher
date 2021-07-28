@@ -8,16 +8,11 @@ using System.Threading;
 using System.Xml;
 using HarmonyLib;
 using Ionic.Crc;
-using Mono.Cecil;
 using Mono.Cecil.Cil;
 using UnityEngine;
 using Verse;
-using cecilOpCodes = Mono.Cecil.Cil.OpCodes;
-using cecilOpCode = Mono.Cecil.Cil.OpCode;
 using OpCodes = System.Reflection.Emit.OpCodes;
 using System.Collections;
-using System.Runtime.InteropServices;
-using System.ComponentModel;
 using Verse.Steam;
 using System.Diagnostics;
 
@@ -40,7 +35,7 @@ namespace Prepatcher
         static Assembly origAsm;
         static Assembly newAsm;
 
-        const string PrepatcherMarkerField = "PrepatcherMarker";
+        public const string PrepatcherMarkerField = "PrepatcherMarker";
         const string AssemblyCSharp = "Assembly-CSharp.dll";
         const string AssemblyCSharpCached = "Assembly-CSharp_prepatched.dll";
         const string AssemblyCSharpCachedHash = "Assembly-CSharp_prepatched.hash";
@@ -95,7 +90,7 @@ namespace Prepatcher
 
                 Info("Baking a new assembly");
                 stream = new MemoryStream();
-                BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream);
+                Baker.BakeAsm(assemblyCSharpBytes, fieldsToAdd, stream, Util.DataPath(AssemblyCSharpCached));
                 File.WriteAllText(Util.DataPath(AssemblyCSharpCachedHash), fieldCrc.ToString(), Encoding.UTF8);
 
                 Info($"Baking took: {clock2.ElapsedMilliseconds}");
@@ -305,111 +300,6 @@ namespace Prepatcher
             };
         }
 
-        static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, MemoryStream writeTo)
-        {
-            var clock1 = Stopwatch.StartNew();
-            using ModuleDefinition module = ModuleDefinition.ReadModule(new MemoryStream(sourceAsmBytes));
-            Info($"Reading took {clock1.ElapsedMilliseconds}");
-
-            module.GetType("Verse.Game").Fields.Add(new FieldDefinition(
-                PrepatcherMarkerField,
-                Mono.Cecil.FieldAttributes.Static,
-                module.TypeSystem.Int32
-            ));
-
-            foreach (var newField in fieldsToAdd)
-                AddField(module, newField);
-
-            Info("Added fields");
-
-            var clock2 = Stopwatch.StartNew();
-            module.Write(writeTo);
-            Info($"Write to memory took {clock2.ElapsedMilliseconds}");
-
-            var clock3 = Stopwatch.StartNew();
-            File.WriteAllBytes(Util.DataPath(AssemblyCSharpCached), writeTo.ToArray());
-            Info($"Write to file took {clock3.ElapsedMilliseconds}");
-        }
-
-        static void AddField(ModuleDefinition module, NewFieldData newField)
-        {
-            var fieldType = GenTypes.GetTypeInAnyAssembly(newField.fieldType);
-            var ceFieldType = module.ImportReference(fieldType);
-
-            Info($"Patching in a new field {newField.name} of type {ceFieldType.ToStringSafe()}/{newField.fieldType} in type {newField.targetType}");
-
-            var ceField = new FieldDefinition(
-                newField.name,
-                Mono.Cecil.FieldAttributes.Public,
-                ceFieldType
-            );
-
-            if (newField.isStatic)
-                ceField.Attributes |= Mono.Cecil.FieldAttributes.Static;
-
-            var targetType = module.GetType(newField.targetType);
-            targetType.Fields.Add(ceField);
-
-            if (newField.defaultValue != null)
-                WriteFieldInitializers(newField, ceField, fieldType);
-        }
-
-        static void WriteFieldInitializers(NewFieldData newField, FieldDefinition ceNewField, Type fieldType)
-        {
-            var targetType = ceNewField.DeclaringType;
-            var i = targetType.Fields.IndexOf(ceNewField);
-
-            foreach (var ctor in targetType.GetConstructors().Where(c => c.IsStatic == newField.isStatic))
-            {
-                if (Util.CallsAThisCtor(ctor)) continue;
-
-                var insts = ctor.Body.Instructions;
-                int insertAt = -1;
-                int lastValid = -1;
-
-                for (int k = 0; k < insts.Count; k++)
-                {
-                    var inst = insts[k];
-                    insertAt = lastValid;
-
-                    if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor)
-                        break;
-
-                    if (inst.OpCode == cecilOpCodes.Stfld && inst.Operand is FieldDefinition f)
-                    {
-                        if (targetType.Fields.IndexOf(f) > i)
-                            break;
-
-                        lastValid = k;
-                    }
-                }
-
-                insertAt++;
-
-                var ilProc = ctor.Body.GetILProcessor();
-                var insertBefore = insts[insertAt];
-
-                if (!newField.isStatic)
-                    ilProc.InsertBefore(insertBefore, Instruction.Create(cecilOpCodes.Ldarg_0));
-
-                if (newField.defaultValue == NewFieldData.DEFAULT_VALUE_NEW_CTOR)
-                {
-                    ilProc.InsertBefore(insertBefore, Instruction.Create(cecilOpCodes.Newobj, targetType.Module.ImportReference(fieldType.GetConstructor(new Type[0]))));
-                }
-                else
-                {
-                    var defaultValueInst = Instruction.Create(cecilOpCodes.Ret);
-                    var op = Util.GetConstantOpCode(newField.defaultValue).Value;
-                    defaultValueInst.OpCode = op;
-                    defaultValueInst.Operand = op == cecilOpCodes.Ldc_I4 ? Convert.ToInt32(newField.defaultValue) : newField.defaultValue;
-
-                    ilProc.InsertBefore(insertBefore, defaultValueInst); 
-                }
-
-                ilProc.InsertBefore(insertBefore, Instruction.Create(newField.isStatic ? cecilOpCodes.Stsfld : cecilOpCodes.Stfld, ceNewField));
-            }
-        }
-
         static bool doneLoading;
         static bool runOnce;
 
@@ -478,9 +368,9 @@ namespace Prepatcher
             *(int*)((long)(IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
         }
 
-        static void Info(string msg) => Log.Message($"Prepatcher: {msg}");
-        static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}");
-        static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}");
+        public static void Info(string msg) => Log.Message($"Prepatcher: {msg}");
+        public static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}");
+        public static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}");
     }
 
     public class NewFieldData
@@ -505,149 +395,6 @@ namespace Prepatcher
             if (defaultValue == null)
                 return "";
             return $" = {(defaultValue == DEFAULT_VALUE_NEW_CTOR ? "new ()" : defaultValue.ToStringSafe())}";
-        }
-    }
-
-    public static class Util
-    {
-        public static void Insert<T>(this IList<T> list, int index, params T[] items)
-        {
-            foreach (T item in items)
-                list.Insert(index++, item);
-        }
-
-        public static object TryConvert(this TypeConverter converter, string s)
-        {
-            try
-            {
-                return converter.ConvertFromInvariantString(s);
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        public static bool CallsAThisCtor(MethodDefinition method)
-        {
-            foreach (var inst in method.Body.Instructions)
-                if (inst.OpCode == cecilOpCodes.Call && inst.Operand is MethodDefinition m && m.IsConstructor && m.DeclaringType == method.DeclaringType)
-                    return true;
-            return false;
-        }
-
-        public static cecilOpCode? GetConstantOpCode(object c)
-        {
-            return GetConstantOpCode(c.GetType());
-        }
-
-        public static cecilOpCode? GetConstantOpCode(Type t)
-        {
-            var code = Type.GetTypeCode(t);
-
-            if (code >= TypeCode.Boolean && code <= TypeCode.UInt32)
-                return cecilOpCodes.Ldc_I4;
-
-            if (code >= TypeCode.Int64 && code <= TypeCode.UInt64)
-                return cecilOpCodes.Ldc_I8;
-
-            if (code == TypeCode.Single)
-                return cecilOpCodes.Ldc_R4;
-
-            if (code == TypeCode.Double)
-                return cecilOpCodes.Ldc_R8;
-
-            if (code == TypeCode.String)
-                return cecilOpCodes.Ldstr;
-
-            return null;
-        }
-
-        public static ulong ToUInt64(object obj)
-        {
-            if (obj is ulong u)
-                return u;
-            return (ulong)Convert.ToInt64(obj);
-        }
-
-        public static object FromUInt64(ulong from, Type to) => Type.GetTypeCode(to) switch
-        {
-            TypeCode.Byte => (byte)from,
-            TypeCode.SByte => (sbyte)from,
-            TypeCode.Int16 => (short)from,
-            TypeCode.UInt16 => (ushort)from,
-            TypeCode.Int32 => (int)from,
-            TypeCode.UInt32 => (uint)from,
-            TypeCode.Int64 => (long)from,
-            TypeCode.UInt64 => from,
-            _ => null
-        };
-
-        public static ulong? FindNotTaken(ulong start, ulong max, HashSet<ulong> taken)
-        {
-            // TODO maybe wrap around?
-            for (ulong i = start; i <= max; i++)
-            {
-                if (taken.Contains(i)) continue;
-                return i;
-            }
-
-            return null;
-        }
-
-        static string ManagedFolderOS()
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return "Resources/Data/Managed";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                return "Managed";
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
-                return "Managed";
-            return null;
-        }
-
-        public static string DataPath(string file)
-        {
-            return Path.Combine(Application.dataPath, ManagedFolderOS(), file);
-        }
-
-        public static IEnumerable<MethodDefinition> GetConstructors(this TypeDefinition self)
-        {
-            return self.Methods.Where(method => method.IsConstructor);
-        }
-
-        public static HashSet<string> AssembliesDependingOn(IEnumerable<Assembly> assemblies, params string[] on)
-        {
-            var dependants = new Dictionary<string, HashSet<string>>();
-
-            foreach (var asm in assemblies)
-                foreach (var reference in asm.GetReferencedAssemblies())
-                {
-                    if (!dependants.TryGetValue(reference.Name, out var set))
-                        dependants[reference.Name] = set = new HashSet<string>();
-
-                    set.Add(asm.GetName().Name);
-                }
-
-            var result = new HashSet<string>();
-            var todo = new Queue<string>();
-
-            foreach (var o in on)
-                todo.Enqueue(o);
-
-            while (todo.Count > 0)
-            {
-                var t = todo.Dequeue();
-                result.Add(t);
-
-                if (!dependants.ContainsKey(t)) continue;
-
-                foreach (var d in dependants[t])
-                    if (!result.Contains(d))
-                        todo.Enqueue(d);
-            }
-
-            return result;
         }
     }
 }
