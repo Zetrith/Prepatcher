@@ -160,7 +160,8 @@ namespace Prepatcher
             );
 
             harmony.Patch(
-                origAsm.GetType("Verse.Log").GetMethod("Error", new[] { typeof(string) }),
+                // Obsolete signature, used for cross-version compat
+                origAsm.GetType("Verse.Log").GetMethod("Error", new[] { typeof(string), typeof(bool) }),
                 new HarmonyMethod(typeof(PrepatcherMod), nameof(LogErrorPrefix))
             );
         }
@@ -332,7 +333,7 @@ namespace Prepatcher
         {
             // It's important the components are iterated this way to make sure
             // they are recreated in the correct order.
-            foreach (var comp in UnityEngine.Object.FindObjectsOfType<UnityEngine.Component>())
+            foreach (var comp in UnityEngine.Object.FindObjectsOfType<Component>())
             {
                 var translation = newAsm.GetType(comp.GetType().FullName);
                 if (translation == null) continue;
@@ -368,9 +369,10 @@ namespace Prepatcher
             *(int*)((long)(IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
         }
 
-        public static void Info(string msg) => Log.Message($"Prepatcher: {msg}");
-        public static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}");
-        public static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}");
+        // Obsolete signatures, used for cross-version compat
+        public static void Info(string msg) => Log.Message($"Prepatcher: {msg}", false);
+        public static void InfoXML(string msg) => Log.Message($"Prepatcher XML: {msg}", false);
+        public static void ErrorXML(string msg) => Log.Error($"Prepatcher XML: {msg}", false);
     }
 
     public class NewFieldData
