@@ -8,6 +8,7 @@
     <li>1.3</li>
   </supportedVersions>
   <author>Zetrith</author>
+  <url>https://github.com/Zetrith/Prepatcher</url>
   <modDependencies>
     <li>
       <packageId>brrainz.harmony</packageId>

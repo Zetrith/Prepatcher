@@ -7,17 +7,19 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using HarmonyLib;
+using Mono.Cecil.Rocks;
 using Verse;
 
 namespace Prepatcher
 {
-    public class Baker
+    public static class Baker
     {
-        public static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, MemoryStream writeTo, string cachePath)
+        public static void BakeAsm(byte[] sourceAsmBytes, List<NewFieldData> fieldsToAdd, MemoryStream writeTo)
         {
-            var clock1 = Stopwatch.StartNew();
+            var clock = Stopwatch.StartNew();
             using ModuleDefinition module = ModuleDefinition.ReadModule(new MemoryStream(sourceAsmBytes));
-            PrepatcherMod.Info($"Reading took {clock1.ElapsedMilliseconds}");
+            PrepatcherMod.Info($"Reading took {clock.ElapsedMilliseconds}");
 
             module.GetType("Verse.Game").Fields.Add(new FieldDefinition(
                 PrepatcherMod.PrepatcherMarkerField,
@@ -30,12 +32,22 @@ namespace Prepatcher
 
             PrepatcherMod.Info("Added fields");
 
+            PrepatcherMod.ProcessModule(module);
+
+            module.GetType("Verse.Root").Methods.First(m => m.name == "Update").Body.Instructions.Insert(0, Instruction.Create(
+                OpCodes.Call,
+                module.ImportReference(SymbolExtensions.GetMethodInfo(() => Allocs.Update()))
+            ));
+
             var clock2 = Stopwatch.StartNew();
             module.Write(writeTo);
             PrepatcherMod.Info($"Write to memory took {clock2.ElapsedMilliseconds}");
+        }
 
+        public static void CacheData(MemoryStream stream, string cachePath)
+        {
             var clock3 = Stopwatch.StartNew();
-            File.WriteAllBytes(cachePath, writeTo.ToArray());
+            File.WriteAllBytes(cachePath, stream.ToArray());
             PrepatcherMod.Info($"Write to file took {clock3.ElapsedMilliseconds}");
         }
 
@@ -48,12 +60,12 @@ namespace Prepatcher
 
             var ceField = new FieldDefinition(
                 newField.name,
-                Mono.Cecil.FieldAttributes.Public,
+                FieldAttributes.Public,
                 ceFieldType
             );
 
             if (newField.isStatic)
-                ceField.Attributes |= Mono.Cecil.FieldAttributes.Static;
+                ceField.Attributes |= FieldAttributes.Static;
 
             var targetType = module.GetType(newField.targetType);
             targetType.Fields.Add(ceField);
@@ -71,7 +83,7 @@ namespace Prepatcher
             {
                 if (Util.CallsAThisCtor(ctor)) continue;
 
-                var insts = ctor.Body.Instructions;
+                var insts = (IList<Instruction>)ctor.Body.Instructions;
                 int insertAt = -1;
                 int lastValid = -1;
 

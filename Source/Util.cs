@@ -98,7 +98,7 @@ namespace Prepatcher
             return null;
         }
 
-        static string ManagedFolderOS()
+        public static string ManagedFolderOS()
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                 return "Resources/Data/Managed";
@@ -109,7 +109,7 @@ namespace Prepatcher
             return null;
         }
 
-        public static string DataPath(string file)
+        public static string FileInManagedFolder(string file)
         {
             return Path.Combine(Application.dataPath, ManagedFolderOS(), file);
         }
