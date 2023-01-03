@@ -4,13 +4,10 @@ namespace Prepatcher;
 
 internal static class Lg
 {
-    internal static void Info(object msg)
-    {
-        Log.Message($"Prepatcher: {msg}");
-    }
+    internal static Action<object> InfoFunc;
+    internal static Action<object> ErrorFunc;
 
-    internal static void Error(string msg)
-    {
-        Log.Error($"Prepatcher Error: {msg}");
-    }
+    internal static void Info(object msg) => InfoFunc(msg);
+
+    internal static void Error(string msg) => ErrorFunc(msg);
 }

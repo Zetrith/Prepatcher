@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using Prepatcher.Process;
 using Verse;
 using Verse.Steam;
 
@@ -21,7 +22,10 @@ internal static class Loader
         UnregisterWorkshopCallbacks();
         ClearAssemblyResolve();
 
-        new AssemblyProcessor().ProcessAndReload();
+        var processor = new GameAssemblyProcessor();
+        processor.Init();
+        processor.Process();
+        processor.Reload();
 
         Lg.Info("Done loading");
         doneLoading = true;

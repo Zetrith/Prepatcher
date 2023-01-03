@@ -2,11 +2,12 @@
 using System.Linq;
 using Mono.Cecil;
 using Mono.Cecil.Cil;
+using Mono.Collections.Generic;
 using MonoMod.Utils;
 using FieldAttributes = Mono.Cecil.FieldAttributes;
 using MethodImplAttributes = Mono.Cecil.MethodImplAttributes;
 
-namespace Prepatcher;
+namespace Prepatcher.Process;
 
 internal class FieldAdder
 {
@@ -27,8 +28,8 @@ internal class FieldAdder
                 continue;
             }
 
-            AddField(fieldAccessor);
-            PatchAccessor(fieldAccessor);
+            var newField = AddField(fieldAccessor);
+            PatchAccessor(fieldAccessor, newField);
         }
     }
 
@@ -50,37 +51,39 @@ internal class FieldAdder
         return null;
     }
 
-    private void AddField(MethodDefinition accessor)
+    private FieldDefinition AddField(MethodDefinition accessor)
     {
         var targetType = accessor.FirstParameterTypeResolved();
-        var fieldType = accessor.ReturnType.IsByReference ? accessor.ReturnType.GetElementType() : accessor.ReturnType;
-        var ceFieldType = targetType.Module.ImportReference(fieldType);
+        var fieldType = FieldTypeInResolvedTarget(accessor);
 
-        Lg.Info($"Patching in a new field {FieldNameFromAccessor(accessor)} of type {ceFieldType} in type {targetType}");
+        Lg.Info($"Patching in a new field {FieldName(accessor)} of type {fieldType} in type {targetType}");
 
         var ceField = new FieldDefinition(
-            FieldNameFromAccessor(accessor),
+            FieldName(accessor),
             FieldAttributes.Public,
-            ceFieldType
+            fieldType
         );
 
         var ceTargetType = targetType.Module.Resolve(targetType);
         ceTargetType.Fields.Add(ceField);
 
         processor.FindModifiableAssembly(targetType)!.NeedsReload = true;
+
+        return ceField;
     }
 
-    private void PatchAccessor(MethodDefinition accessor)
+    private void PatchAccessor(MethodDefinition accessor, FieldDefinition newField)
     {
         accessor.ImplAttributes &= ~MethodImplAttributes.InternalCall; // Unextern
 
-        var targetType = accessor.FirstParameterTypeResolved();
-        var fieldType = accessor.ReturnType.IsByReference ? accessor.ReturnType.GetElementType() : accessor.ReturnType;
-        var fieldRef =
-            accessor.Module.ImportReference(new FieldReference(FieldNameFromAccessor(accessor), fieldType, targetType));
-
         var body = accessor.Body = new MethodBody(accessor);
         var il = body.GetILProcessor();
+
+        var fieldRef = new FieldReference(
+            FieldName(accessor),
+            accessor.Module.ImportReference(newField.FieldType, accessor.Module.ImportReference(newField.DeclaringType)),
+            accessor.Parameters.First().ParameterType
+        );
 
         // Simple getter or ref-getter body
         il.Emit(OpCodes.Ldarg_0);
@@ -90,7 +93,22 @@ internal class FieldAdder
         processor.FindModifiableAssembly(accessor.DeclaringType)!.NeedsReload = true;
     }
 
-    private static string FieldNameFromAccessor(MethodDefinition accessor)
+    private static TypeReference FieldType(MethodDefinition accessor)
+    {
+        return accessor.ReturnType.IsByReference ? ((ByReferenceType)accessor.ReturnType).ElementType : accessor.ReturnType;
+    }
+
+    private static TypeReference FieldTypeInResolvedTarget(MethodDefinition accessor)
+    {
+        var targetType = accessor.FirstParameterTypeResolved();
+        var fieldType = FieldType(accessor);
+        return targetType.Module.ImportReference(
+            fieldType,
+            new DummyMethodReference(accessor.Name, targetType.Module.ImportReference(accessor.DeclaringType), targetType.GenericParameters)
+        );
+    }
+
+    private static string FieldName(MethodDefinition accessor)
     {
         return accessor.DeclaringType.Module.Assembly.ShortName() + accessor.Name + accessor.MetadataToken.RID;
     }
@@ -101,5 +119,18 @@ internal class FieldAdder
             .Where(t => t.IsSealed && t.IsAbstract) // IsStatic
             .SelectMany(t => t.Methods)
             .Where(m => m.HasCustomAttribute(typeof(PrepatcherFieldAttribute).FullName));
+    }
+}
+
+internal class DummyMethodReference : MethodReference
+{
+    private readonly Collection<GenericParameter> genericParameters;
+    public override Collection<GenericParameter> GenericParameters => genericParameters;
+
+    public DummyMethodReference(string name, TypeReference declaringType, Collection<GenericParameter> genericParameters)
+    {
+        Name = name;
+        DeclaringType = declaringType;
+        this.genericParameters = genericParameters;
     }
 }

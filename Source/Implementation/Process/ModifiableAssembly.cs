@@ -2,20 +2,21 @@
 using System.Reflection;
 using Mono.Cecil;
 
-namespace Prepatcher;
+namespace Prepatcher.Process;
 
 public class ModifiableAssembly
 {
-    public Assembly? SourceAssembly { get; }
+    private Assembly? SourceAssembly { get; }
     public AssemblyDefinition AsmDefinition { get; }
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
     public bool NeedsReload { get; set; }
     public bool Modifiable { get; set; } = true;
+    public bool Processable { get; set; }
     public byte[] Bytes { get; private set; }
 
     public ModifiableAssembly(Assembly sourceAssembly, IAssemblyResolver resolver)
     {
-        this.SourceAssembly = sourceAssembly;
+        SourceAssembly = sourceAssembly;
         AsmDefinition = AssemblyDefinition.ReadAssembly(new MemoryStream(UnsafeAssembly.GetRawData(sourceAssembly)),
             new ReaderParameters
             {
@@ -31,11 +32,16 @@ public class ModifiableAssembly
         );
     }
 
-    // Writing and loading is split to do as little as possible after refonlys are set
     public void PrepareByteArray()
     {
         var stream = new MemoryStream();
         AsmDefinition.Write(stream);
         Bytes = stream.ToArray();
     }
+
+    public void SetSourceRefOnly()
+    {
+        UnsafeAssembly.SetReflectionOnly(SourceAssembly!, true);
+    }
+
 }

@@ -1,5 +1,6 @@
 ﻿using System.Threading;
 using HarmonyLib;
+using Prepatcher.Process;
 using Verse;
 
 namespace Prepatcher;
@@ -10,6 +11,9 @@ internal class PrepatcherMod : Mod
 
     public PrepatcherMod(ModContentPack content) : base(content)
     {
+        Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
+        Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
+
         if (AccessTools.Field(typeof(Game), AssemblyProcessor.PrepatcherMarkerField) != null)
         {
             Lg.Info($"Restarted with the patched assembly, going silent.");

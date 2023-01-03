@@ -6,7 +6,7 @@ namespace Prepatcher;
 
 internal class UnsafeAssembly
 {
-    private static readonly FieldInfo MonoAssemblyField = AccessTools.Field(typeof(Assembly), "_mono_assembly");
+    private static readonly FieldInfo? MonoAssemblyField = AccessTools.Field(typeof(Assembly), "_mono_assembly");
 
     // Loading two assemblies with the same name and version isn't possible with Unity's Mono.
     // It IS possible in .Net and has been fixed in more recent versions of Mono
@@ -17,11 +17,15 @@ internal class UnsafeAssembly
     // That allows for the duplication to happen.
     internal static unsafe void SetReflectionOnly(Assembly asm, bool value)
     {
-        *(int*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
+        if (MonoAssemblyField != null)
+            *(int*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
     }
 
     internal static unsafe byte[] GetRawData(Assembly asm)
     {
+        if (MonoAssemblyField == null)
+            throw new Exception("Not available on non-Mono runtime");
+
         var image = *(long*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x60);
         var rawData = *(long*)((IntPtr)image + 0x10);
         var rawDataLength = *(uint*)((IntPtr)image + 0x18);

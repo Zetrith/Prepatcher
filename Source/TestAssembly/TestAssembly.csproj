@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net48</TargetFramework>
+        <LangVersion>10.0</LangVersion>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\API\API.csproj" />
+      <ProjectReference Include="..\TestTargetAssembly\TestTargetAssembly.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Using Include="System" />
+    </ItemGroup>
+
+</Project>
