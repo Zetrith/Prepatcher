@@ -13,7 +13,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAssembly", "TestAssembly\TestAssembly.csproj", "{82A4BF2A-319E-4BD4-9A8D-E02D1A8C155F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestTargetAssembly", "TestTargetAssembly\TestTargetAssembly.csproj", "{5E2FDDB3-D0DC-4CD0-AA78-03147E4B0D11}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestAssemblyTarget", "TestAssemblyTarget\TestAssemblyTarget.csproj", "{5E2FDDB3-D0DC-4CD0-AA78-03147E4B0D11}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

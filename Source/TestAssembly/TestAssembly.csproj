@@ -4,11 +4,12 @@
         <TargetFramework>net48</TargetFramework>
         <LangVersion>10.0</LangVersion>
         <Nullable>enable</Nullable>
+        <RootNamespace>Tests</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\API\API.csproj" />
-      <ProjectReference Include="..\TestTargetAssembly\TestTargetAssembly.csproj" />
+      <ProjectReference Include="..\TestAssemblyTarget\TestAssemblyTarget.csproj" />
     </ItemGroup>
 
     <ItemGroup>

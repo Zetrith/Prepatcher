@@ -18,35 +18,44 @@ internal class FieldAdder
         this.processor = processor;
     }
 
-    internal void ProcessModAssembly(ModifiableAssembly assembly)
+    internal void ProcessTypes(IEnumerable<TypeDefinition> inTypes)
     {
-        foreach (var fieldAccessor in GetAllPrepatcherFieldAccessors(assembly.ModuleDefinition))
-        {
-            if (CheckFieldAccessor(fieldAccessor) is { } error)
-            {
-                Lg.Error(error);
-                continue;
-            }
+        foreach (var accessor in GetAllPrepatcherFieldAccessors(inTypes))
+            ProcessAccessor(accessor);
+    }
 
-            var newField = AddField(fieldAccessor);
-            PatchAccessor(fieldAccessor, newField);
+    internal void ProcessAccessor(MethodDefinition accessor)
+    {
+        if (CheckFieldAccessor(accessor) is { } error)
+        {
+            Lg.Error($"{error} for new field with accessor {accessor.MemberFullName()}");
+            return;
         }
+
+        var newField = AddField(accessor);
+        PatchAccessor(accessor, newField);
     }
 
     private string? CheckFieldAccessor(MethodDefinition accessor)
     {
-        if ((accessor.ImplAttributes & MethodImplAttributes.InternalCall) != 0)
-            return $"Accessor {accessor.MemberFullName()} is not extern";
+        if (accessor.HasBody && accessor.Body.Instructions.Count() != 0)
+            return "Accessor is not extern";
 
         if (accessor.Parameters.Count() != 1)
-            return $"Accessor {accessor.MemberFullName()} has wrong parameter count";
+            return "Accessor has wrong parameter count";
 
         var target = accessor.FirstParameterTypeResolved();
         if (target == null)
-            return $"Couldn't resolve target type for new field with accessor {accessor.MemberFullName()}";
+            return "Couldn't resolve target type";
+
+        if (target.IsInterface)
+            return "Target type can't be an interface";
+
+        if (!GenericArgumentsOf(accessor.Parameters.First().ParameterType).SequenceEqual(accessor.GenericParameters))
+            return "The generic arguments of the target type don't match the generic parameters of the accessor";
 
         if (!processor.FindModifiableAssembly(target)!.Modifiable)
-            return $"Target type {target} for new field with accessor {accessor.MemberFullName()} is not modifiable";
+            return "Target type is not modifiable";
 
         return null;
     }
@@ -113,12 +122,17 @@ internal class FieldAdder
         return accessor.DeclaringType.Module.Assembly.ShortName() + accessor.Name + accessor.MetadataToken.RID;
     }
 
-    private static IEnumerable<MethodDefinition> GetAllPrepatcherFieldAccessors(ModuleDefinition module)
+    internal static IEnumerable<MethodDefinition> GetAllPrepatcherFieldAccessors(IEnumerable<TypeDefinition> inTypes)
     {
-        return module.Types
+        return inTypes
             .Where(t => t.IsSealed && t.IsAbstract) // IsStatic
             .SelectMany(t => t.Methods)
             .Where(m => m.HasCustomAttribute(typeof(PrepatcherFieldAttribute).FullName));
+    }
+
+    private static IEnumerable<TypeReference> GenericArgumentsOf(TypeReference t)
+    {
+        return t is GenericInstanceType gType ? gType.GenericArguments : Enumerable.Empty<TypeReference>();
     }
 }
 

@@ -11,7 +11,7 @@ public class ModifiableAssembly
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
     public bool NeedsReload { get; set; }
     public bool Modifiable { get; set; } = true;
-    public bool Processable { get; set; }
+    public bool ProcessAttributes { get; set; }
     public byte[] Bytes { get; private set; }
 
     public ModifiableAssembly(Assembly sourceAssembly, IAssemblyResolver resolver)

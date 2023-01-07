@@ -17,10 +17,11 @@ internal class GameAssemblyProcessor : AssemblyProcessor
     private const string AssemblyCSharpFile = "Assembly-CSharp.dll";
     private const string AssemblyCSharp = "Assembly-CSharp";
     private const string VerseGameType = "Verse.Game";
+    internal const string PrepatcherMarkerField = "PrepatcherMarker";
 
     internal void Init()
     {
-        AddAssembly(typeof(Game).Assembly);
+        asmCSharp = AddAssembly(typeof(Game).Assembly);
 
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
             if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
@@ -30,7 +31,7 @@ internal class GameAssemblyProcessor : AssemblyProcessor
         {
             if (FindModifiableAssembly(modAssembly.GetName().Name) != null) continue;
             var masm = AddAssembly(modAssembly);
-            masm.Processable = true;
+            masm.ProcessAttributes = true;
             modAssemblies.Add(masm);
         }
     }

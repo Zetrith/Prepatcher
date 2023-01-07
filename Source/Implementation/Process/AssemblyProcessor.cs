@@ -14,8 +14,6 @@ public class AssemblyProcessor
 
     private IAssemblyResolver Resolver { get; }
 
-    internal const string PrepatcherMarkerField = "PrepatcherMarker";
-
     public AssemblyProcessor()
     {
         Resolver = new AssemblyResolver(this);
@@ -39,8 +37,8 @@ public class AssemblyProcessor
 
     internal virtual void Process()
     {
-        foreach (var asm in allAssemblies.Where(a => a.Processable))
-            new FieldAdder(this).ProcessModAssembly(asm);
+        foreach (var asm in allAssemblies.Where(a => a.ProcessAttributes))
+            new FieldAdder(this).ProcessTypes(asm.ModuleDefinition.Types);
     }
 
     internal void Reload()

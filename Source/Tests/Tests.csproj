@@ -20,7 +20,7 @@
     <ItemGroup>
       <ProjectReference Include="..\Implementation\Implementation.csproj" />
       <ProjectReference Include="..\TestAssembly\TestAssembly.csproj" />
-      <ProjectReference Include="..\TestTargetAssembly\TestTargetAssembly.csproj" />
+      <ProjectReference Include="..\TestAssemblyTarget\TestAssemblyTarget.csproj" />
     </ItemGroup>
 
     <ItemGroup>

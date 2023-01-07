@@ -14,7 +14,7 @@ internal class PrepatcherMod : Mod
         Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
-        if (AccessTools.Field(typeof(Game), AssemblyProcessor.PrepatcherMarkerField) != null)
+        if (AccessTools.Field(typeof(Game), GameAssemblyProcessor.PrepatcherMarkerField) != null)
         {
             Lg.Info($"Restarted with the patched assembly, going silent.");
             return;
