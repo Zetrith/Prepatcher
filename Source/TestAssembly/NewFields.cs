@@ -4,7 +4,7 @@ using TestTargetAssembly;
 
 namespace Tests;
 
-public static class TestSuccess
+public static class NewFields
 {
     [PrepatcherField]
     private static extern ref int MyInt(this TargetClass target);
@@ -36,7 +36,7 @@ public static class TestSuccess
     public static string TestGenericField2(string s)
     {
         var obj = new TargetGeneric3<string, int, float>();
-        obj.MyTriple() = (s, 5f, 1);
+        obj.MyTriple() = (s, 1f, 1);
         return obj.MyTriple().Item1;
     }
 

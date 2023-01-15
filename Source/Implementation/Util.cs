@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using System.Reflection;
 using Mono.Cecil;
@@ -30,9 +31,13 @@ internal static class Util
         throw new Exception("Unknown platform");
     }
 
-    public static TypeDefinition? FirstParameterTypeResolved(this MethodDefinition methodDef)
+    public static IEnumerable<TypeDefinition> BaseTypesAndSelfResolved(this TypeDefinition? type)
     {
-        return methodDef.Parameters.First().ParameterType.Resolve();
+        while (type != null)
+        {
+            yield return type;
+            type = type.BaseType?.Resolve();
+        }
     }
 
     public static IEnumerable<T> BFS<T>(IEnumerable<T> start, Func<T, IEnumerable<T>> next)

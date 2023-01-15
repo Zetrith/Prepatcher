@@ -4,7 +4,7 @@ using TestTargetAssembly;
 
 namespace Tests;
 
-public static class TestFail
+public static class BadFields
 {
     [PrepatcherField]
     private static ref int FailExtern(TargetClass target) => throw new Exception();
@@ -27,10 +27,19 @@ public static class TestFail
     [PrepatcherField]
     private static extern ref int FailGenericsDontMatch<T, U, W>(TargetGeneric3<T, W, U> target);
 
-    // The System assemblies aren't loaded for this test
+    // The parameter type is List because it isn't resolvable in the test environment
+    // (System assembly isn't provided)
     [PrepatcherField]
     private static extern ref int FailUnresolvable<T>(List<T> target);
 
     [PrepatcherField]
     private static extern ref int FailInterface(TargetInterface target);
+
+    [PrepatcherField]
+    [InjectComponent]
+    private static extern ref ThingComp FailInjectionByRef(ThingWithComps target);
+
+    [PrepatcherField]
+    [InjectComponent]
+    private static extern ThingComp FailUnknownInjection(TargetClass target);
 }

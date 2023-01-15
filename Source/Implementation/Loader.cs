@@ -22,10 +22,7 @@ internal static class Loader
         UnregisterWorkshopCallbacks();
         ClearAssemblyResolve();
 
-        var processor = new GameAssemblyProcessor();
-        processor.Init();
-        processor.Process();
-        processor.Reload();
+        GameProcessing.Process();
 
         Lg.Info("Done loading");
         doneLoading = true;

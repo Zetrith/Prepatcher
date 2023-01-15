@@ -7,16 +7,18 @@ using Mono.Cecil;
 namespace Prepatcher.Process;
 
 // Assumption: there only exists one assembly with a given name (just name, not f.e. name+version pair)
-public class AssemblyProcessor
+public abstract class AssemblyProcessor
 {
     private List<ModifiableAssembly> allAssemblies = new();
     private Dictionary<string, ModifiableAssembly> nameToAsm = new();
 
     private IAssemblyResolver Resolver { get; }
+    internal FieldAdder FieldAdder { get; }
 
     public AssemblyProcessor()
     {
         Resolver = new AssemblyResolver(this);
+        FieldAdder = new FieldAdder(this);
     }
 
     internal ModifiableAssembly AddAssembly(Assembly asm)
@@ -38,7 +40,7 @@ public class AssemblyProcessor
     internal virtual void Process()
     {
         foreach (var asm in allAssemblies.Where(a => a.ProcessAttributes))
-            new FieldAdder(this).ProcessTypes(asm.ModuleDefinition.Types);
+            FieldAdder.ProcessTypes(asm.ModuleDefinition.Types);
     }
 
     internal void Reload()
@@ -59,10 +61,7 @@ public class AssemblyProcessor
             LoadAssembly(toReload);
     }
 
-    protected virtual Assembly LoadAssembly(ModifiableAssembly asm)
-    {
-        return Assembly.Load(asm.Bytes);
-    }
+    protected abstract void LoadAssembly(ModifiableAssembly asm);
 
     private void MarkForReloading()
     {
@@ -83,6 +82,12 @@ public class AssemblyProcessor
     internal ModifiableAssembly? FindModifiableAssembly(TypeDefinition typeDef)
     {
         return FindModifiableAssembly(typeDef.Module.Assembly.ShortName());
+    }
+
+    internal TypeDefinition ReflectionToCecil(Type type)
+    {
+        // Use any assembly as they all go through the same assembly resolver
+        return allAssemblies[0].ModuleDefinition.ImportReference(type).Resolve();
     }
 
     private Dictionary<ModifiableAssembly, HashSet<ModifiableAssembly>> AssembliesToDependants(IEnumerable<ModifiableAssembly> asms)

@@ -1,35 +1,34 @@
-using Prepatcher;
-using Prepatcher.Process;
-
 namespace Tests;
 
-public class TestsPositive
+public class TestsPositive : TestProcessorBase
 {
     [OneTimeSetUp]
-    public void Setup()
+    public override void Setup()
     {
-        Lg.InfoFunc = Console.WriteLine;
-        Lg.ErrorFunc = msg => throw new LogErrorException($"{msg}");
+        base.Setup();
 
-        var processor = new TestAssemblyProcessor();
-
-        var targetAsm = processor.AddAssembly("TestAssemblyTarget.dll");
-        targetAsm.ProcessAttributes = true;
-
-        var testAsm = processor.AddAssembly("TestAssembly.dll");
-        testAsm.ProcessAttributes = true;
-
-        var typeSuccess = testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(TestSuccess)}");
-        new FieldAdder(processor).ProcessTypes(TestExts.EnumerableOf(typeSuccess));
+        processor.FieldAdder.ProcessTypes(new[]
+        {
+            testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(NewFields)}"),
+            testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(Injections)}")
+        });
         processor.Reload();
     }
 
     [Test]
     public void TestNewFields()
     {
-        Assert.AreEqual(TestSuccess.TestIntField(1), 1);
-        Assert.AreEqual(TestSuccess.TestGenericField1("test1"), "test1");
-        Assert.AreEqual(TestSuccess.TestGenericField2("test2"), "test2");
-        Assert.AreEqual(TestSuccess.TestGenericField3("test3"), "test3");
+        Assert.AreEqual(NewFields.TestIntField(1), 1);
+        Assert.AreEqual(NewFields.TestGenericField1("test1"), "test1");
+        Assert.AreEqual(NewFields.TestGenericField2("test2"), "test2");
+        Assert.AreEqual(NewFields.TestGenericField3("test3"), "test3");
+    }
+
+    [Test]
+    public void TestInjections()
+    {
+        Assert.True(Injections.TestCompInjection());
+        Assert.True(Injections.TestCompBaseInjection());
+        Assert.True(Injections.TestCompInjectionOnSubType());
     }
 }

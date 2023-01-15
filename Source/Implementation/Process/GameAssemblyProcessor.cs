@@ -11,30 +11,11 @@ namespace Prepatcher.Process;
 
 internal class GameAssemblyProcessor : AssemblyProcessor
 {
-    private ModifiableAssembly asmCSharp;
-    private List<ModifiableAssembly> modAssemblies = new();
+    internal ModifiableAssembly asmCSharp;
 
-    private const string AssemblyCSharpFile = "Assembly-CSharp.dll";
     private const string AssemblyCSharp = "Assembly-CSharp";
     private const string VerseGameType = "Verse.Game";
     internal const string PrepatcherMarkerField = "PrepatcherMarker";
-
-    internal void Init()
-    {
-        asmCSharp = AddAssembly(typeof(Game).Assembly);
-
-        foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
-            if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
-                AddAssembly(asmPath).Modifiable = false;
-
-        foreach (var modAssembly in GetUniqueModAssemblies())
-        {
-            if (FindModifiableAssembly(modAssembly.GetName().Name) != null) continue;
-            var masm = AddAssembly(modAssembly);
-            masm.ProcessAttributes = true;
-            modAssemblies.Add(masm);
-        }
-    }
 
     internal override void Process()
     {
@@ -52,20 +33,13 @@ internal class GameAssemblyProcessor : AssemblyProcessor
         base.Process();
     }
 
-    protected override Assembly LoadAssembly(ModifiableAssembly asm)
+    protected override void LoadAssembly(ModifiableAssembly asm)
     {
-        var loadedAssembly = base.LoadAssembly(asm);
+        var loadedAssembly = Assembly.Load(asm.Bytes);
         if (loadedAssembly.GetName().Name == AssemblyCSharp)
         {
             Loader.newAsm = loadedAssembly;
             AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
         }
-
-        return loadedAssembly;
-    }
-
-    private static IEnumerable<Assembly> GetUniqueModAssemblies()
-    {
-        return LoadedModManager.RunningModsListForReading.SelectMany(m => m.assemblies.loadedAssemblies).Distinct();
     }
 }

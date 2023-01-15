@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-public class TestExts
+public static class TestExtensions
 {
     internal static IEnumerable<T> EnumerableOf<T>(T obj)
     {
