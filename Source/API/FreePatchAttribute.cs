@@ -4,6 +4,6 @@
 /// Attribute marking an assembly rewriting method
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
-public class FreePatch : Attribute
+public class FreePatchAttribute : Attribute
 {
 }

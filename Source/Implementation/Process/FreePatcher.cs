@@ -13,7 +13,7 @@ internal static class FreePatcher
 
         foreach (var patcher in
                  patcherAssemblies.SelectMany(asm => asm.GetTypes()).Where(AccessTools.IsStatic)
-                     .SelectMany(AccessTools.GetDeclaredMethods).Where(m => m.GetCustomAttribute<FreePatch>() != null))
+                     .SelectMany(AccessTools.GetDeclaredMethods).Where(m => m.GetCustomAttribute<FreePatchAttribute>() != null))
             patcher.Invoke(null, new object[] { patchedAssembly.ModuleDefinition });
     }
 }
