@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace TestTargetAssembly;
+namespace TestAssemblyTarget;
 
 public class TargetClass
 {
@@ -35,4 +35,12 @@ public class ThingWithComps
 
 public class SubThingWithComps : ThingWithComps
 {
+}
+
+public class RewriteTarget
+{
+    public int Method()
+    {
+        return 0;
+    }
 }

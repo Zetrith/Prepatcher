@@ -3,7 +3,7 @@ using Prepatcher.Process;
 
 namespace Tests;
 
-public class TestsNegative : TestProcessorBase
+public class TestsNegative : TestBase
 {
     private TypeDefinition typeFail;
 

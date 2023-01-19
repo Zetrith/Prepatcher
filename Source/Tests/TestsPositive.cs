@@ -1,6 +1,10 @@
+using Prepatcher;
+using Prepatcher.Process;
+using TestAssemblyTarget;
+
 namespace Tests;
 
-public class TestsPositive : TestProcessorBase
+public class TestsPositive : TestBase
 {
     [OneTimeSetUp]
     public override void Setup()
@@ -12,6 +16,9 @@ public class TestsPositive : TestProcessorBase
             testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(NewFields)}"),
             testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(Injections)}")
         });
+
+        FreePatcher.RunPatches(new []{ liveTestAsm }, targetAsm);
+
         processor.Reload();
     }
 
@@ -30,5 +37,11 @@ public class TestsPositive : TestProcessorBase
         Assert.True(Injections.TestCompInjection());
         Assert.True(Injections.TestCompBaseInjection());
         Assert.True(Injections.TestCompInjectionOnSubType());
+    }
+
+    [Test]
+    public void TestFreePatching()
+    {
+        Assert.AreEqual(new RewriteTarget().Method(), 1);
     }
 }

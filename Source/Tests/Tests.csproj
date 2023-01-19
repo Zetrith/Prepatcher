@@ -6,6 +6,7 @@
         <Nullable>disable</Nullable>
         <IsPackable>false</IsPackable>
         <RootNamespace>Tests</RootNamespace>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <ItemGroup>

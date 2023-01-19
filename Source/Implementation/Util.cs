@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Reflection;
 using Mono.Cecil;
 using UnityEngine;
 using System.Runtime.InteropServices;
+using Mono.Cecil.Cil;
 
 namespace Prepatcher;
 
@@ -59,5 +59,13 @@ internal static class Util
         }
 
         return result;
+    }
+
+    public static void SetEmptyBody(MethodDefinition def)
+    {
+        def.Body = new MethodBody(def)
+        {
+            Instructions = { Instruction.Create(OpCodes.Ret) }
+        };
     }
 }

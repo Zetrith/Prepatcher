@@ -1,10 +1,5 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Reflection;
+﻿using System.Reflection;
 using Mono.Cecil;
-using UnityEngine;
-using Verse;
 using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 namespace Prepatcher.Process;

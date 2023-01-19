@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 using Prepatcher;
-using TestTargetAssembly;
+using TestAssemblyTarget;
 
 namespace Tests;
 

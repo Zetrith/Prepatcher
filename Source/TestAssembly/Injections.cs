@@ -1,5 +1,5 @@
 ﻿using Prepatcher;
-using TestTargetAssembly;
+using TestAssemblyTarget;
 
 namespace Tests;
 

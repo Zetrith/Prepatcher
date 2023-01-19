@@ -4,7 +4,6 @@
         <TargetFramework>net48</TargetFramework>
         <LangVersion>10.0</LangVersion>
         <Nullable>enable</Nullable>
-        <RootNamespace>TestTargetAssembly</RootNamespace>
     </PropertyGroup>
 
     <ItemGroup>
