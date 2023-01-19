@@ -1,5 +1,7 @@
-﻿using System.Reflection;
+﻿using System.IO;
+using System.Reflection;
 using Mono.Cecil;
+using Verse;
 using FieldAttributes = Mono.Cecil.FieldAttributes;
 
 namespace Prepatcher.Process;
@@ -23,6 +25,8 @@ internal class GameAssemblyProcessor : AssemblyProcessor
         ));
 
         asmCSharp.NeedsReload = true;
+        asmCSharp.Modified = true;
+
         FindModifiableAssembly("0Harmony")!.NeedsReload = true;
 
         base.Process();
@@ -35,6 +39,13 @@ internal class GameAssemblyProcessor : AssemblyProcessor
         {
             Loader.newAsm = loadedAssembly;
             AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
+        }
+
+        if (GenCommandLine.TryGetCommandLineArg("dumpasms", out var path))
+        {
+            Directory.CreateDirectory(path);
+            if (asm.Modified)
+                File.WriteAllBytes(Path.Combine(path, asm.AsmDefinition.Name.Name + ".dll"), asm.Bytes);
         }
     }
 }

@@ -4,9 +4,11 @@ Structured assembly rewriting library/mod for RimWorld
 ## Installation
 
 ### Users
-Download the mod zip from Releases https://github.com/Zetrith/Prepatcher/releases and unzip in RimWorld's Mods folder.
+Download the mod zip from [Releases](https://github.com/Zetrith/Prepatcher/releases) and unzip in RimWorld's Mods folder.
 
 Clicking *Code* > *Download ZIP* on GitHub's main page won't work. Please use Releases.
+
+Prepatcher depends on [Harmony](https://github.com/pardeike/HarmonyRimWorld). Install it first in the mod list and put Prepatcher right below.
 
 ### Modders
 
@@ -25,5 +27,5 @@ For more details and features, see https://github.com/Zetrith/Prepatcher/wiki
 
 
 ## Compiling
-Clone anywhere and go to the Sources folder. Run `dotnet build` and/or `dotnet test`.
+Clone anywhere and go to the Source folder. Run `dotnet build` and/or `dotnet test`.
 If you want to run it ingame clone to the Mods folder.

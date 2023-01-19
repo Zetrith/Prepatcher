@@ -12,8 +12,9 @@
         <Authors>Zetrith</Authors>
         <Description>The API for Prepatcher, an assembly rewriting library for RimWorld.</Description>
         <PackageProjectUrl>https://github.com/Zetrith/Prepatcher</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/Zetrith/Prepatcher/blob/master/LICENSE</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/Zetrith/Prepatcher</RepositoryUrl>
+        <PackageId>PrepatcherAPI</PackageId>
     </PropertyGroup>
 
   <ItemGroup>

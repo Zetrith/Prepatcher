@@ -41,6 +41,9 @@ internal static class GameProcessing
         FreePatcher.RunPatches(modAsms, processor.asmCSharp);
 
         processor.Reload();
+
+        if (GenCommandLine.CommandLineArgPassed("dumpandexit"))
+            Application.Quit();
     }
 
     private static void AddComponentInjections(FieldAdder fieldAdder)

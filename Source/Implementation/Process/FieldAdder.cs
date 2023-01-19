@@ -94,7 +94,9 @@ internal class FieldAdder
         var ceTargetType = targetType.Module.Resolve(targetType);
         ceTargetType.Fields.Add(ceField);
 
-        processor.FindModifiableAssembly(targetType)!.NeedsReload = true;
+        var targetAsm = processor.FindModifiableAssembly(targetType)!;
+        targetAsm.NeedsReload = true;
+        targetAsm.Modified = true;
 
         return ceField;
     }
@@ -121,7 +123,9 @@ internal class FieldAdder
         il.Emit(accessor.ReturnType.IsByReference ? OpCodes.Ldflda : OpCodes.Ldfld, fieldRef);
         il.Emit(OpCodes.Ret);
 
-        processor.FindModifiableAssembly(accessor.DeclaringType)!.NeedsReload = true;
+        var accessorAsm = processor.FindModifiableAssembly(accessor.DeclaringType)!;
+        accessorAsm.NeedsReload = true;
+        accessorAsm.Modified = true;
     }
 
     private void AddInjectionHelper(MethodDefinition accessor, FieldDefinition newField)

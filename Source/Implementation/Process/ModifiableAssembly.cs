@@ -10,6 +10,7 @@ public class ModifiableAssembly
     public AssemblyDefinition AsmDefinition { get; }
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
     public bool NeedsReload { get; set; }
+    public bool Modified { get; set; } // Used to dump modified assemblies
     public bool Modifiable { get; set; } = true;
     public bool ProcessAttributes { get; set; }
     public byte[] Bytes { get; private set; }
