@@ -8,9 +8,10 @@ using TestAssemblyTarget;
 
 namespace Tests;
 
-public class TestBase
+internal class TestBase
 {
-    protected TestAssemblyProcessor processor;
+    protected AssemblySet set;
+    protected FieldAdder fieldAdder;
 
     protected ModifiableAssembly testAsm;
     protected ModifiableAssembly targetAsm;
@@ -29,12 +30,13 @@ public class TestBase
 
         LoadLiveAsms();
 
-        processor = new TestAssemblyProcessor();
+        set = new AssemblySet();
+        fieldAdder = new FieldAdder(set);
 
-        targetAsm = processor.AddAssembly("TestAssemblyTarget.dll");
+        targetAsm = set.AddAssembly("TestAssemblyTarget.dll");
         targetAsm.ProcessAttributes = true;
 
-        testAsm = processor.AddAssembly("TestAssembly.dll");
+        testAsm = set.AddAssembly("TestAssembly.dll");
         testAsm.ProcessAttributes = true;
 
         var typeThingWithComps =
@@ -42,7 +44,7 @@ public class TestBase
         var typeThingComp =
             targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(ThingComp)}");
 
-        processor.FieldAdder.AddComponentInjection(
+        fieldAdder.AddComponentInjection(
             typeThingWithComps,
             typeThingComp,
             nameof(ThingWithComps.InitComps),
@@ -50,8 +52,7 @@ public class TestBase
         );
     }
 
-    // Load actual callable instances of the test assemblies
-    // They are used to test free patching
+    // Load the test assemblies and make them resolvable for freepatch testing
     private void LoadLiveAsms()
     {
         const string testAssemblyTargetNewName = "TestAssemblyTarget1";
@@ -88,5 +89,11 @@ public class TestBase
 
         AppDomain.CurrentDomain.AssemblyResolve +=
             (_, args) => args.Name.StartsWith(testAssemblyTargetNewName) ? liveTargetAsm : null;
+    }
+
+    protected static void LoadAssembly(ModifiableAssembly asm)
+    {
+        // Replaces the actual assembly file that will get auto-loaded by the runtime
+        File.WriteAllBytes(asm.AsmDefinition.ShortName() + ".dll", asm.Bytes);
     }
 }

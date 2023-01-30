@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\API\API.csproj" />
+    <ProjectReference Include="..\DataAssembly\DataAssembly.csproj" />
     <ProjectReference Include="..\Prestarter\Prestarter.csproj" />
   </ItemGroup>
 

@@ -16,12 +16,18 @@ namespace Prepatcher.Process;
 
 internal class FieldAdder
 {
-    private AssemblyProcessor processor;
+    private readonly AssemblySet set;
     private Dictionary<(TypeDefinition targetType, TypeDefinition compType), (MethodDefinition initMethod, FieldDefinition listField)> injectionSites = new();
 
-    public FieldAdder(AssemblyProcessor processor)
+    public FieldAdder(AssemblySet set)
     {
-        this.processor = processor;
+        this.set = set;
+    }
+
+    internal void ProcessAllAssemblies()
+    {
+        foreach (var asm in set.AllAssemblies.Where(a => a.ProcessAttributes))
+            ProcessTypes(asm.ModuleDefinition.Types);
     }
 
     internal void ProcessTypes(IEnumerable<TypeDefinition> inTypes)
@@ -63,7 +69,7 @@ internal class FieldAdder
         if (!GenericArgumentsOf(accessor.Parameters.First().ParameterType).SequenceEqual(accessor.GenericParameters))
             return "The generic arguments of the target type don't match the generic parameters of the accessor";
 
-        if (!processor.FindModifiableAssembly(target)!.Modifiable)
+        if (!set.FindModifiableAssembly(target)!.Modifiable)
             return "Target type is not modifiable";
 
         if (HasInjection(accessor))
@@ -94,7 +100,7 @@ internal class FieldAdder
         var ceTargetType = targetType.Module.Resolve(targetType);
         ceTargetType.Fields.Add(ceField);
 
-        var targetAsm = processor.FindModifiableAssembly(targetType)!;
+        var targetAsm = set.FindModifiableAssembly(targetType)!;
         targetAsm.NeedsReload = true;
         targetAsm.Modified = true;
 
@@ -127,7 +133,7 @@ internal class FieldAdder
         il.Emit(accessor.ReturnType.IsByReference ? OpCodes.Ldflda : OpCodes.Ldfld, fieldRef);
         il.Emit(OpCodes.Ret);
 
-        var accessorAsm = processor.FindModifiableAssembly(accessor.DeclaringType)!;
+        var accessorAsm = set.FindModifiableAssembly(accessor.DeclaringType)!;
         accessorAsm.NeedsReload = true;
         accessorAsm.Modified = true;
     }
@@ -161,8 +167,8 @@ internal class FieldAdder
     internal void AddComponentInjection(Type targetType, Type compType, string initMethod, string listField)
     {
         AddComponentInjection(
-            processor.ReflectionToCecil(targetType),
-            processor.ReflectionToCecil(compType),
+            set.ReflectionToCecil(targetType),
+            set.ReflectionToCecil(compType),
             initMethod,
             listField
         );

@@ -1,25 +1,25 @@
+using System.IO;
 using Prepatcher;
 using Prepatcher.Process;
 using TestAssemblyTarget;
 
 namespace Tests;
 
-public class TestPatches : TestBase
+internal class TestPatches : TestBase
 {
     [OneTimeSetUp]
     public override void Setup()
     {
         base.Setup();
 
-        processor.FieldAdder.ProcessTypes(new[]
+        fieldAdder.ProcessTypes(new[]
         {
             testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(NewFields)}"),
             testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(Injections)}")
         });
 
         FreePatcher.RunPatches(new []{ liveTestAsm }, targetAsm);
-
-        processor.Reload();
+        Reloader.Reload(set, LoadAssembly);
     }
 
     [Test]

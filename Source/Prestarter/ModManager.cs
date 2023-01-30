@@ -440,8 +440,11 @@ internal class ModManager
         return ModLister.GetModWithIdentifier(modId);
     }
 
-    private static void LaunchAsync()
+    private void LaunchAsync()
     {
+        ModsConfig.SetActiveToList(active);
+        ModsConfig.Save();
+
         LongEventHandler.QueueLongEvent(PrestarterInit.DoLoad, "", true, null, false);
     }
 }

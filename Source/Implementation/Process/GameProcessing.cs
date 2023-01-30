@@ -10,40 +10,62 @@ namespace Prepatcher.Process;
 
 internal static class GameProcessing
 {
+    private const string AssemblyCSharp = "Assembly-CSharp";
     private const string AssemblyCSharpFile = "Assembly-CSharp.dll";
 
     internal static void Process()
     {
-        var processor = new GameAssemblyProcessor();
+        var set = new AssemblySet();
 
         // Add Assembly-CSharp
-        processor.asmCSharp = processor.AddAssembly(typeof(Game).Assembly);
+        var asmCSharp = set.AddAssembly(typeof(Game).Assembly);
 
         // Add System and Unity assemblies
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
             if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
-                processor.AddAssembly(asmPath).Modifiable = false;
+                set.AddAssembly(asmPath).Modifiable = false;
 
         var modAsms = new List<Assembly>();
 
         // Add mod assemblies
         foreach (var modAssembly in GetUniqueModAssemblies())
         {
-            if (processor.FindModifiableAssembly(modAssembly.GetName().Name) != null) continue;
-            var masm = processor.AddAssembly(modAssembly);
+            if (set.FindModifiableAssembly(modAssembly.GetName().Name) != null) continue;
+            var masm = set.AddAssembly(modAssembly);
             masm.ProcessAttributes = true;
             modAsms.Add(modAssembly);
         }
 
-        AddComponentInjections(processor.FieldAdder);
+        asmCSharp.NeedsReload = true;
+        set.FindModifiableAssembly("0Harmony")!.NeedsReload = true;
 
-        processor.Process();
-        FreePatcher.RunPatches(modAsms, processor.asmCSharp);
+        var fieldAdder = new FieldAdder(set);
+        AddComponentInjections(fieldAdder);
+        fieldAdder.ProcessAllAssemblies();
 
-        processor.Reload();
+        FreePatcher.RunPatches(modAsms, asmCSharp);
+
+        Reloader.Reload(set, LoadAssembly);
 
         if (GenCommandLine.CommandLineArgPassed("dumpandexit"))
             Application.Quit();
+    }
+
+    private static void LoadAssembly(ModifiableAssembly asm)
+    {
+        var loadedAssembly = Assembly.Load(asm.Bytes);
+        if (loadedAssembly.GetName().Name == AssemblyCSharp)
+        {
+            Loader.newAsm = loadedAssembly;
+            AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
+        }
+
+        if (GenCommandLine.TryGetCommandLineArg("dumpasms", out var path))
+        {
+            Directory.CreateDirectory(path);
+            if (asm.Modified)
+                File.WriteAllBytes(Path.Combine(path, asm.AsmDefinition.Name.Name + ".dll"), asm.Bytes);
+        }
     }
 
     private static void AddComponentInjections(FieldAdder fieldAdder)

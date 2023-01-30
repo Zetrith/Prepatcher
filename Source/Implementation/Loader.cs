@@ -27,6 +27,15 @@ internal static class Loader
     {
         origAsm = typeof(Game).Assembly;
 
+        // Reinit after mod list potential changes from Prestarter
+        using (StopwatchScope.Measure("Reinit mods"))
+        {
+            LoadedModManager.runningMods.Clear();
+            LoadedModManager.InitializeMods();
+            foreach (var mod in LoadedModManager.RunningModsListForReading)
+                mod.assemblies.ReloadAll();
+        }
+
         HarmonyPatches.PatchRootMethods();
         UnregisterWorkshopCallbacks();
         ClearAssemblyResolve();

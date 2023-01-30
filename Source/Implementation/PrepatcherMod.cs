@@ -1,8 +1,6 @@
 ﻿using System.Threading;
-using HarmonyLib;
-using Prepatcher.Process;
+using DataAssembly;
 using Verse;
-using Unity.Collections;
 
 namespace Prepatcher;
 
@@ -13,11 +11,14 @@ internal class PrepatcherMod : Mod
         Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
-        if (AccessTools.Field(typeof(Game), GameAssemblyProcessor.PrepatcherMarkerField) != null)
+        if (DataStore.startedOnce)
         {
             Lg.Info($"Restarted with the patched assembly, going silent.");
             return;
         }
+
+        DataStore.startedOnce = true;
+        Lg.Info("Starting...");
 
         Loader.PreLoad();
 

@@ -3,7 +3,7 @@ using Prepatcher.Process;
 
 namespace Tests;
 
-public class TestExceptions : TestBase
+internal class TestExceptions : TestBase
 {
     private TypeDefinition typeFail;
 
@@ -20,7 +20,7 @@ public class TestExceptions : TestBase
         foreach (var accessor in FieldAdder.GetAllPrepatcherFieldAccessors(TestExtensions.EnumerableOf(typeFail)))
             Assert.Throws<LogErrorException>(() =>
             {
-                processor.FieldAdder.ProcessAccessor(accessor);
+                fieldAdder.ProcessAccessor(accessor);
             }, accessor.Name);
     }
 }
