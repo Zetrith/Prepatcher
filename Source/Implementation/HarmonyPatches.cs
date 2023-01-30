@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Reflection.Emit;
 using System.Threading;
 using HarmonyLib;
+using RimWorld;
 using UnityEngine;
 using Verse;
 
@@ -11,42 +12,52 @@ namespace Prepatcher;
 internal static class HarmonyPatches
 {
     private static bool runOnce;
-    internal static int stopLoggingThread;
+    private static Harmony harmony = new("prepatcher");
 
-    internal static void DoHarmonyPatches()
+    internal static void DoHarmonyPatchesForMinimalInit()
+    {
+        // Don't print thread abortion errors to log
+        harmony.Patch(
+            typeof(Log).GetMethod("Error", new[] { typeof(string) }),
+            new HarmonyMethod(typeof(HarmonyPatches), nameof(LogErrorPrefix))
+        );
+
+        // Cancel MusicManagerEntryUpdate because it requires SongDefOf.EntrySong != null
+        harmony.Patch(
+            typeof(MusicManagerEntry).GetMethod("MusicManagerEntryUpdate"),
+            new HarmonyMethod(typeof(HarmonyPatches), nameof(Cancel))
+        );
+    }
+
+    internal static void PatchRootMethods()
     {
         Lg.Info("Patching Start");
 
-        PrepatcherMod.harmony.Patch(
+        harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Play").GetMethod("Start"),
             transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(EmptyTranspiler))
         );
 
-        PrepatcherMod.harmony.Patch(
+        harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Entry").GetMethod("Start"),
             transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(EmptyTranspiler))
         );
 
-        PrepatcherMod.harmony.Patch(
+        harmony.Patch(
             Loader.origAsm.GetType("Verse.Root").GetMethod("OnGUI"),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(RootOnGUIPrefix))
         );
 
         Lg.Info("Patching Update");
 
-        PrepatcherMod.harmony.Patch(
+        harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Play").GetMethod("Update"),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(RootUpdatePrefix))
         );
 
-        PrepatcherMod.harmony.Patch(
+        harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Entry").GetMethod("Update"),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(RootUpdatePrefix))
-        );
-
-        PrepatcherMod.harmony.Patch(
-            Loader.origAsm.GetType("Verse.Log").GetMethod("Error", new[] { typeof(string) }),
-            new HarmonyMethod(typeof(HarmonyPatches), nameof(LogErrorPrefix))
         );
     }
 
@@ -98,8 +109,13 @@ internal static class HarmonyPatches
         return true;
     }
 
-    private static bool LogErrorPrefix()
+    private static bool Cancel()
     {
-        return Thread.CurrentThread.ManagedThreadId != stopLoggingThread;
+        return false;
+    }
+
+    private static bool LogErrorPrefix(string text)
+    {
+        return !text.Contains("ThreadAbortException");
     }
 }

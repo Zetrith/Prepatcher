@@ -26,6 +26,7 @@ public class TestsPositive : TestBase
     public void TestNewFields()
     {
         Assert.AreEqual(NewFields.TestIntField(1), 1);
+        Assert.AreEqual(NewFields.TestIntStructField(1), 1);
         Assert.AreEqual(NewFields.TestGenericField1("test1"), "test1");
         Assert.AreEqual(NewFields.TestGenericField2("test2"), "test2");
         Assert.AreEqual(NewFields.TestGenericField3("test3"), "test3");

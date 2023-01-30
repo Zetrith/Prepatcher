@@ -80,7 +80,7 @@ internal class FieldAdder
 
     private FieldDefinition AddField(MethodDefinition accessor)
     {
-        var targetType = FirstParameterTypeResolved(accessor);
+        var targetType = FirstParameterTypeResolved(accessor)!;
         var fieldType = ImportFieldTypeIntoTargetModule(accessor);
 
         Lg.Info($"Patching in a new field {FieldName(accessor)} of type {fieldType} in type {targetType}");
@@ -108,10 +108,14 @@ internal class FieldAdder
         var body = accessor.Body = new MethodBody(accessor);
         var il = body.GetILProcessor();
 
+        var fieldOwner = accessor.Parameters.First().ParameterType;
+        if (fieldOwner.IsByReference)
+            fieldOwner = ((ByReferenceType)fieldOwner).ElementType;
+
         var fieldRef = new FieldReference(
             FieldName(accessor),
             accessor.Module.ImportReference(newField.FieldType, accessor.Module.ImportReference(newField.DeclaringType)),
-            accessor.Parameters.First().ParameterType
+            fieldOwner
         );
 
         // Simple getter or ref-getter body
@@ -196,7 +200,7 @@ internal class FieldAdder
 
     private static TypeReference ImportFieldTypeIntoTargetModule(MethodDefinition accessor)
     {
-        var targetType = FirstParameterTypeResolved(accessor);
+        var targetType = FirstParameterTypeResolved(accessor)!;
         var fieldType = FieldType(accessor);
         return targetType.Module.ImportReference(
             fieldType,

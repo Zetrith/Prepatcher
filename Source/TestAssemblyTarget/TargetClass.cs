@@ -6,6 +6,10 @@ public class TargetClass
 {
 }
 
+public struct TargetStruct
+{
+}
+
 public class TargetGeneric<T>
 {
 }

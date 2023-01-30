@@ -49,8 +49,9 @@ public abstract class AssemblyProcessor
 
         // Writing and loading is split to do as little as possible after refonlys are set
         Lg.Info("Writing new assemblies");
-        foreach (var toReload in allAssemblies.Where(modAssembly => modAssembly.NeedsReload))
-            toReload.PrepareByteArray();
+        using (StopwatchScope.Measure("Writing"))
+            foreach (var toReload in allAssemblies.Where(modAssembly => modAssembly.NeedsReload))
+                toReload.PrepareByteArray();
 
         Lg.Info("Setting refonly");
         foreach (var toReload in allAssemblies.Where(modAssembly => modAssembly.NeedsReload))

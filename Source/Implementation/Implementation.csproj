@@ -15,14 +15,14 @@
   <ItemGroup>
 
     <!-- Nuget dependencies -->
-    <PackageReference Include="Krafs.Publicizer" Version="2.1.0" />
+    <PackageReference Include="Krafs.Publicizer" Version="2.0.1" />
     <PackageReference Include="Lib.Harmony" Version="2.2.2" ExcludeAssets="runtime" />
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.3580" />
+    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.4.3558" />
 
   </ItemGroup>
 
   <ItemGroup>
-    <Publicize Include="Assembly-CSharp;0Harmony" />
+    <Publicize Include="UnityEngine.CoreModule;UnityEngine.UIElementsModule;Assembly-CSharp;0Harmony" />
   </ItemGroup>
 
   <ItemGroup>
@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\API\API.csproj" />
+    <ProjectReference Include="..\Prestarter\Prestarter.csproj" />
   </ItemGroup>
 
 </Project>

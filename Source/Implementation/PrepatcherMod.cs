@@ -2,13 +2,12 @@
 using HarmonyLib;
 using Prepatcher.Process;
 using Verse;
+using Unity.Collections;
 
 namespace Prepatcher;
 
 internal class PrepatcherMod : Mod
 {
-    public static Harmony harmony = new Harmony("prepatcher");
-
     public PrepatcherMod(ModContentPack content) : base(content)
     {
         Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
@@ -20,15 +19,18 @@ internal class PrepatcherMod : Mod
             return;
         }
 
-        Loader.DoLoad();
+        Loader.PreLoad();
+
+        if (GenCommandLine.CommandLineArgPassed("noprestarter"))
+            Loader.DoLoad();
 
         try
         {
             Thread.CurrentThread.Abort();
         } catch (ThreadAbortException)
         {
+            // Thread abortion counts as a crash
             Prefs.data.resetModsConfigOnCrash = false;
-            HarmonyPatches.stopLoggingThread = Thread.CurrentThread.ManagedThreadId;
         }
     }
 }

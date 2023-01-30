@@ -10,6 +10,9 @@ public static class NewFields
     private static extern ref int MyInt(this TargetClass target);
 
     [PrepatcherField]
+    private static extern ref int MyIntStruct(this ref TargetStruct target);
+
+    [PrepatcherField]
     private static extern ref List<T> MyList<T>(this TargetGeneric<T> target);
 
     [PrepatcherField]
@@ -23,6 +26,13 @@ public static class NewFields
         var obj = new TargetClass();
         obj.MyInt() = i;
         return obj.MyInt();
+    }
+
+    public static int TestIntStructField(int i)
+    {
+        TargetStruct s = default;
+        s.MyIntStruct() = i;
+        return s.MyIntStruct();
     }
 
     public static string TestGenericField1(string s)
