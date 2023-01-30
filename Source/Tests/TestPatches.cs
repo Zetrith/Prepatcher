@@ -4,7 +4,7 @@ using TestAssemblyTarget;
 
 namespace Tests;
 
-public class TestsPositive : TestBase
+public class TestPatches : TestBase
 {
     [OneTimeSetUp]
     public override void Setup()
