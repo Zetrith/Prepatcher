@@ -31,10 +31,12 @@ internal class ModManager
     private List<string> selectedMods = new();
     private string? draggedMod;
 
-    private List<string>? DraggedMods =>
-        ReorderableWidget.Dragging
+    private static List<string> emptyList = new();
+
+    private List<string> DraggedMods =>
+        draggedMod != null
             ? selectedMods.Contains(draggedMod) ? selectedMods : new List<string> { draggedMod }
-            : null;
+            : emptyList;
 
     private int? undoneIndex;
     private List<List<string>> undoStack = new();
@@ -44,11 +46,15 @@ internal class ModManager
 
     private QuickSearchWidget inactiveSearch = new();
     private QuickSearchWidget activeSearch = new();
+    private QuickSearchWidget dummySearch = new();
 
     private string inactiveFilter = "";
     private string activeFilter = "";
 
+    private bool compact;
     private float modItemWidth;
+
+    private float ItemHeight => compact ? 18f : 24f;
 
     internal ModManager()
     {
@@ -72,29 +78,56 @@ internal class ModManager
 
     internal void Draw(Rect rect)
     {
+        ModLists.Update(this);
+
         Widgets.DrawWindowBackground(rect);
 
-        HandleKeys();
+        if (ModLists.CurrentList == null)
+            HandleKeys();
 
         rect = rect.ContractedBy(15);
 
-        Rect listRects = rect;
+        var modListsBtn = rect with { width = 100, height = 30 };
+        if (Widgets.ButtonText(modListsBtn, "Mod lists"))
+        {
+            ModLists.Load();
+
+            var menu = new FloatMenu(ModLists.floatMenuOptions);
+            Find.WindowStack.Add(menu);
+            menu.options = ModLists.floatMenuOptions;
+        }
+
+        var autoSortBtn = rect with { x = modListsBtn.x + 110, width = 100, height = 30 };
+        if (Widgets.ButtonText(autoSortBtn, "Auto-sort"))
+            TrySortMods();
+
+        var compactBox = autoSortBtn with { x = autoSortBtn.x + 120, width = 90 };
+        Widgets.CheckboxLabeled(compactBox, "Compact", ref compact);
+
+        var listRects = rect;
+        listRects.yMin += 40;
         listRects.yMax -= 50;
 
         DoList("Disabled", listRects.LeftPart(0.49f), filteredInactive, ref inactiveScroll, ref inactiveGroup, ref inactiveFilter, inactiveSearch, (_, _) => { });
-        DoList("Enabled",listRects.RightPart(0.49f), filteredActive, ref activeScroll, ref activeGroup, ref activeFilter, activeSearch, OnReorder);
+
+        if (ModLists.CurrentList == null)
+            DoList("Enabled",listRects.RightPart(0.49f), filteredActive, ref activeScroll, ref activeGroup, ref activeFilter, activeSearch, OnReorder);
+        else
+            DoListPreview($"{ModLists.CurrentList.fileName} preview",listRects.RightPart(0.49f), ModLists.CurrentList.ids);
 
         ReorderableLinePatch.dontDrawForGroup = inactiveGroup;
         ReorderableWidget.NewMultiGroup(new List<int> { inactiveGroup, activeGroup }, OnCrossReorder);
 
         if (Widgets.ButtonText(new Rect(0, rect.yMax - 30, 100, 30).CenteredOnXIn(rect), "Launch"))
-            LaunchAsync();
+            Launch();
 
         if (KeyBindingDefOf.Accept.KeyDownEvent)
-            LaunchAsync();
+            Launch();
 
         if (Event.current.type == EventType.Repaint)
             HandleDrag();
+
+        ModLists.PostUpdate();
     }
 
     private void HandleKeys()
@@ -153,7 +186,7 @@ internal class ModManager
                 draggedMod = modList[ReorderableWidget.GetDraggedIndex];
         }
 
-        if (!DraggedMods.NullOrEmpty())
+        if (DraggedMods.Count > 0)
         {
             var mousePos = UI.MousePositionOnUIInverted;
             var absRect = ReorderableWidget.reorderables[ReorderableWidget.draggingReorderable].absRect;
@@ -161,7 +194,7 @@ internal class ModManager
 
             Find.WindowStack.ImmediateWindow(
                 12345,
-                new Rect(mousePos.x + mouseToCornerAtStart.x, mousePos.y - 13f, modItemWidth, 26f * Math.Min(DraggedMods.Count, 30)),
+                new Rect(mousePos.x + mouseToCornerAtStart.x, mousePos.y - 13f, modItemWidth, ItemHeight * Math.Min(DraggedMods.Count, 30)),
                 WindowLayer.Super, DoDraggedMods, doBackground: false, shadowAlpha: 0f
             );
         }
@@ -169,17 +202,17 @@ internal class ModManager
 
     private void DoDraggedMods()
     {
-        if (DraggedMods is not { Count: > 0 })
+        if (DraggedMods.Count == 0)
             return;
 
         int index = 0;
-        Widgets.DrawWindowBackground(new Rect(0f, 0f, modItemWidth, 26f * Math.Min(DraggedMods.Count, 30)));
+        Widgets.DrawWindowBackground(new Rect(0f, 0f, modItemWidth, ItemHeight * Math.Min(DraggedMods.Count, 30)));
 
         foreach (var mod in DraggedMods)
         {
             if (index > 30)
                 break;
-            Rect r = new Rect(0f, index * 26f, modItemWidth, 26f);
+            Rect r = new Rect(0f, index * ItemHeight, modItemWidth, ItemHeight);
             DoModRow(r, mod, index, true);
             index++;
         }
@@ -200,20 +233,19 @@ internal class ModManager
             RecacheLists();
         }
 
-        const float itemHeight = 26f;
-        Widgets.BeginScrollView(rect, ref scroll, new Rect(0, 0, rect.width - 16, list.Count * itemHeight));
+        Widgets.BeginScrollView(rect, ref scroll, new Rect(0, 0, rect.width - 16, list.Count * ItemHeight));
 
-        float viewInOutStart = scroll.y - 26f;
-        float viewInOutEnd = scroll.y + rect.height;
+        var viewInOutStart = scroll.y - ItemHeight;
+        var viewInOutEnd = scroll.y + rect.height;
 
         if (Event.current.type == EventType.Repaint)
             group = ReorderableWidget.NewGroup(onReorder, ReorderableDirection.Vertical, rect);
 
-        int itemIndex = 0;
+        var itemIndex = 0;
 
         foreach (var item in list)
         {
-            var itemRect = new Rect(0, itemIndex * 26f, rect.width - 16f, itemHeight);
+            var itemRect = new Rect(0, itemIndex * ItemHeight, rect.width - 16f, ItemHeight);
             ReorderableWidget.Reorderable(group, itemRect, highlightDragged: false);
 
             if (itemRect.y >= viewInOutStart && itemRect.y <= viewInOutEnd)
@@ -222,10 +254,10 @@ internal class ModManager
             if (checkScroll && lastSelectedIndex == itemIndex)
             {
                 var dir = !(itemRect.y <= scroll.y) ? 1 : -1;
-                while (itemRect.y <= viewInOutStart || itemRect.y + 26f > viewInOutEnd)
+                while (itemRect.y <= viewInOutStart || itemRect.y + ItemHeight > viewInOutEnd)
                 {
-                    scroll.y += 26f * dir;
-                    viewInOutStart = scroll.y - 26f;
+                    scroll.y += ItemHeight * dir;
+                    viewInOutStart = scroll.y - ItemHeight;
                     viewInOutEnd = scroll.y + rect.height;
                 }
 
@@ -238,25 +270,57 @@ internal class ModManager
         Widgets.EndScrollView();
     }
 
+    private void DoListPreview(string label, Rect rect, List<string> list)
+    {
+        Widgets.Label(rect with {height = 30f}, label + $" ({list.Count})");
+        rect.yMin += 35f;
+
+        dummySearch.OnGUI(rect with {height = 30f});
+        rect.yMin += 35f;
+
+        dummySearch.filter.Text = "";
+
+        Vector2 scroll = default;
+        Widgets.BeginScrollView(rect, ref scroll, new Rect(0, 0, rect.width - 16, list.Count * ItemHeight));
+
+        var viewInOutStart = scroll.y - ItemHeight;
+        var viewInOutEnd = scroll.y + rect.height;
+
+        var itemIndex = 0;
+
+        foreach (var item in list)
+        {
+            var itemRect = new Rect(0, itemIndex * ItemHeight, rect.width - 16f, ItemHeight);
+
+            using (MpStyle.Set(Color.gray))
+                if (itemRect.y >= viewInOutStart && itemRect.y <= viewInOutEnd)
+                    DoModRow(itemRect, item, itemIndex, false);
+
+            itemIndex++;
+        }
+
+        Widgets.EndScrollView();
+    }
+
     private void DoModRow(Rect rect, string mod, int index, bool isDragged)
     {
         modItemWidth = rect.width;
 
-        if (!isDragged && DraggedMods != null && DraggedMods.Contains(mod))
+        if (!isDragged && DraggedMods.Contains(mod))
             return;
 
-        if (selectedMods.Contains(mod) && !ReorderableWidget.Dragging)
+        if (selectedMods.Contains(mod) && !ReorderableWidget.Dragging && ModLists.CurrentList == null)
             Widgets.DrawHighlightSelected(rect);
 
         if (index % 2 == 1)
             Widgets.DrawLightHighlight(rect);
 
-        var modData = ModData(mod);
+        DrawContentSource(rect, ModSource(mod), ItemHeight);
+        rect.xMin += ItemHeight + 2f;
 
-        ContentSourceUtility.DrawContentSource(rect, modData.Source);
-        rect.xMin += 28f;
-
-        Widgets.Label(rect, modData.ShortName);
+        using (MpStyle.Set(compact ? GameFont.Tiny : GameFont.Small))
+        using (MpStyle.Set(ModData(mod) == null ? new Color(0.3f, 0.3f, 0.3f) : GUI.color))
+            Widgets.Label(rect, ModShortName(mod));
 
         if (isDragged)
             return;
@@ -359,19 +423,20 @@ internal class ModManager
         }
 
         RecacheLists();
-        SortSelected();
     }
 
     private void Undo()
     {
         ClearSelection();
 
+        // Currently up the undo stack
         if (undoneIndex > 0)
         {
             undoneIndex -= 1;
             active = undoStack[undoneIndex.Value];
         }
 
+        // Not undoing
         if (undoneIndex is null && undoStack.Count > 0)
         {
             undoStack.Add(active);
@@ -408,12 +473,10 @@ internal class ModManager
 
     private void SortSelected()
     {
-        if (selectedMods.Count == 0 || active.Contains(selectedMods[0]))
-            return;
+        if (selectedMods.Count == 0) return;
 
-        selectedMods = (from m in selectedMods.Select(ModData)
-            orderby m.Official descending, m.ShortName
-            select m.PackageId).ToList();
+        var list = active.Contains(selectedMods[0]) ? active : inactive;
+        selectedMods.SortBy(m => list.IndexOf(m));
     }
 
     private void ClearSelection()
@@ -435,16 +498,103 @@ internal class ModManager
         lastSelectedGroup = active.Contains(mod) ? activeGroup : inactiveGroup;
     }
 
-    private static ModMetaData ModData(string modId)
+    private static ModMetaData? ModData(string modId)
     {
         return ModLister.GetModWithIdentifier(modId);
     }
 
-    private void LaunchAsync()
+    private static ContentSource ModSource(string modId)
+    {
+        return ModData(modId)?.Source ??
+               (modId.EndsWith("_steam") ? ContentSource.SteamWorkshop : ContentSource.ModsFolder);
+    }
+
+    private static string ModShortName(string modId)
+    {
+        return ModLister.GetModWithIdentifier(modId)?.ShortName ??
+               ModLists.CurrentList?.names[ModLists.CurrentList.ids.IndexOf(modId)]!;
+    }
+
+    private void Launch()
     {
         ModsConfig.SetActiveToList(active);
         ModsConfig.Save();
 
         LongEventHandler.QueueLongEvent(PrestarterInit.DoLoad, "", true, null, false);
+    }
+
+    internal void SetActive(ModList modList)
+    {
+        PushUndo();
+        ClearSelection();
+
+        active.Clear();
+        var missingMods = new List<int>();
+
+        for (var j = 0; j < modList.ids.Count; j++)
+        {
+            var modMetaData = ModLister.AllInstalledMods.FirstOrDefault(mod => mod.PackageId == modList.ids[j]);
+            if (modMetaData != null)
+                active.Add(modList.ids[j]);
+            else
+                missingMods.Add(j);
+        }
+
+        RecacheLists();
+
+        var missingModStrings = missingMods.Select(i => " - " + modList.names[i] + " (" + modList.ids[i] + ")");
+        if (missingMods.Any())
+            Find.WindowStack.Add(new Dialog_MessageBox(
+                $"Mod list activated with missing mods ignored:\n\n{missingModStrings.ToLineList()}", "OK"));
+    }
+
+    private void TrySortMods()
+    {
+        var list = active.Select(m => ModData(m)!).ToList();
+        var directedAcyclicGraph = new DirectedAcyclicGraph(list.Count);
+
+        for (var i = 0; i < list.Count; i++)
+        {
+            var modMetaData = list[i];
+            foreach (var before in modMetaData.LoadBefore.Concat(modMetaData.ForceLoadBefore))
+            {
+                var modMetaData2 = list.FirstOrDefault(m => m.SamePackageId(before, ignorePostfix: true));
+                if (modMetaData2 != null)
+                    directedAcyclicGraph.AddEdge(list.IndexOf(modMetaData2), i);
+            }
+            foreach (string after in modMetaData.LoadAfter.Concat(modMetaData.ForceLoadAfter))
+            {
+                var modMetaData3 = list.FirstOrDefault(m => m.SamePackageId(after, ignorePostfix: true));
+                if (modMetaData3 != null)
+                    directedAcyclicGraph.AddEdge(i, list.IndexOf(modMetaData3));
+            }
+        }
+
+        var num = directedAcyclicGraph.FindCycle();
+        if (num != -1)
+        {
+            Find.WindowStack.Add(new Dialog_MessageBox("ModCyclicDependency".Translate(list[num].Name)));
+            return;
+        }
+
+        PushUndo();
+
+        var newActive = new List<string>();
+        foreach (int newIndex in directedAcyclicGraph.TopologicalSort())
+            newActive.Add(active[newIndex]);
+        active = newActive;
+
+        RecacheLists();
+    }
+
+    private static void DrawContentSource(Rect r, ContentSource source, float size)
+    {
+        var rect = new Rect(r.x, r.y + r.height / 2f - size / 2f, size, size);
+        GUI.DrawTexture(rect, source.GetIcon());
+        if (Mouse.IsOver(rect))
+        {
+            TooltipHandler.TipRegion(rect, () => "Source".Translate() + ": " + source.HumanLabel(), (int)(r.x + r.y * 56161f));
+            Widgets.DrawHighlight(rect);
+        }
     }
 }

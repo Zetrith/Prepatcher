@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Text.RegularExpressions;
 using RimWorld;
 using Unity.Collections;
 using UnityEngine;
@@ -18,6 +19,10 @@ public class UIRoot_Prestarter : UIRoot
     public UIRoot_Prestarter()
     {
         KeyPrefs.KeyPrefsData.keyPrefs[KeyBindingDefOf.Accept] = new KeyBindingData(KeyCode.Return, KeyCode.None);
+        KeyPrefs.KeyPrefsData.keyPrefs[KeyBindingDefOf.Cancel] = new KeyBindingData(KeyCode.Escape, KeyCode.None);
+
+        ColoredText.ColonistCountRegex = new Regex("\\d+\\.?\\d* (colonist|colonists)");
+        ColoredText.DateTimeRegexes = new List<Regex>();
     }
 
     public override void UIRootOnGUI()
