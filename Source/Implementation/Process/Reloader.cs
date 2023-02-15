@@ -7,7 +7,7 @@ internal static class Reloader
 {
     internal static void Reload(AssemblySet set, Action<ModifiableAssembly> loadAssemblyAction)
     {
-        PropagateReloading(set);
+        PropagateNeedsReload(set);
 
         // Writing and loading is split to do as little as possible after refonlys are set
         Lg.Info("Writing new assemblies");
@@ -24,7 +24,7 @@ internal static class Reloader
             loadAssemblyAction(toReload);
     }
 
-    private static void PropagateReloading(AssemblySet set)
+    private static void PropagateNeedsReload(AssemblySet set)
     {
         var assembliesToReloadStart = set.AllAssemblies.Where(m => m.NeedsReload);
         var assemblyToDependants = set.AllAssembliesToDependants();

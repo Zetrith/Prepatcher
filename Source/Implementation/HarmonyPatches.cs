@@ -92,10 +92,20 @@ internal static class HarmonyPatches
         // they are recreated in the correct order.
         foreach (var comp in UnityEngine.Object.FindObjectsOfType<Component>())
         {
+            if (comp.GetType().Assembly == Loader.newAsm) continue;
+
             var translation = Loader.newAsm.GetType(comp.GetType().FullName);
             if (translation == null) continue;
-            comp.gameObject.AddComponent(translation);
-            UnityEngine.Object.Destroy(comp);
+
+            try
+            {
+                comp.gameObject.AddComponent(translation);
+                UnityEngine.Object.Destroy(comp);
+            }
+            catch (Exception e)
+            {
+                Lg.Error($"Exception recreating Unity component {comp}: {e}");
+            }
         }
     }
 

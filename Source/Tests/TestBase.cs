@@ -44,7 +44,7 @@ internal class TestBase
         var typeThingComp =
             targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(ThingComp)}");
 
-        fieldAdder.AddComponentInjection(
+        fieldAdder.RegisterInjection(
             typeThingWithComps,
             typeThingComp,
             nameof(ThingWithComps.InitComps),
@@ -91,7 +91,7 @@ internal class TestBase
             (_, args) => args.Name.StartsWith(testAssemblyTargetNewName) ? liveTargetAsm : null;
     }
 
-    protected static void LoadAssembly(ModifiableAssembly asm)
+    protected static void WriteAssembly(ModifiableAssembly asm)
     {
         // Replaces the actual assembly file that will get auto-loaded by the runtime
         File.WriteAllBytes(asm.AsmDefinition.ShortName() + ".dll", asm.Bytes);

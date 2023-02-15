@@ -3,11 +3,6 @@ using Verse;
 
 namespace Prestarter;
 
-public enum WordWrap
-{
-    NoWrap, DoWrap
-}
-
 public ref struct MpStyle
 {
     public bool? wrap;
@@ -57,6 +52,11 @@ public ref struct MpStyle
         Text.Font = font;
         return new() { font = prev };
     }
+}
+
+public enum WordWrap
+{
+    NoWrap, DoWrap
 }
 
 public static class MpStyleExtensions

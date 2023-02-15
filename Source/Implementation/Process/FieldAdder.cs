@@ -14,10 +14,9 @@ using MethodImplAttributes = Mono.Cecil.MethodImplAttributes;
 
 namespace Prepatcher.Process;
 
-internal class FieldAdder
+internal partial class FieldAdder
 {
     private readonly AssemblySet set;
-    private Dictionary<(TypeDefinition targetType, TypeDefinition compType), (MethodDefinition initMethod, FieldDefinition listField)> injectionSites = new();
 
     public FieldAdder(AssemblySet set)
     {
@@ -44,47 +43,14 @@ internal class FieldAdder
             return;
         }
 
-        var newField = AddField(accessor);
+        var newField = AddFieldToTarget(accessor);
         PatchAccessor(accessor, newField);
 
         if (HasInjection(accessor))
-            AddInjectionHelper(accessor, newField);
+            PatchInjectionSite(accessor, newField);
     }
 
-    private string? CheckFieldAccessor(MethodDefinition accessor)
-    {
-        if (accessor.HasBody && accessor.Body.Instructions.Count() != 0)
-            return "Accessor is not extern";
-
-        if (accessor.Parameters.Count() != 1)
-            return "Accessor must have exactly one parameter";
-
-        var target = FirstParameterTypeResolved(accessor);
-        if (target == null)
-            return "Couldn't resolve target type";
-
-        if (target.IsInterface)
-            return "Target type can't be an interface";
-
-        if (!GenericArgumentsOf(accessor.Parameters.First().ParameterType).SequenceEqual(accessor.GenericParameters))
-            return "The generic arguments of the target type don't match the generic parameters of the accessor";
-
-        if (!set.FindModifiableAssembly(target)!.Modifiable)
-            return "Target type is not modifiable";
-
-        if (HasInjection(accessor))
-        {
-            if (GetInjectionSite(accessor) == null)
-                return "Unknown injection owner type/component type pair";
-
-            if (accessor.ReturnType.IsByReference)
-                return "Injected field cannot have a setter";
-        }
-
-        return null;
-    }
-
-    private FieldDefinition AddField(MethodDefinition accessor)
+    private FieldDefinition AddFieldToTarget(MethodDefinition accessor)
     {
         var targetType = FirstParameterTypeResolved(accessor)!;
         var fieldType = ImportFieldTypeIntoTargetModule(accessor);
@@ -126,7 +92,7 @@ internal class FieldAdder
 
         // Simple getter or ref-getter body
         // ldarg 0
-        // ldflda/ldfld newfield
+        // ldfld/ldflda newfield
         // ret
 
         il.Emit(OpCodes.Ldarg_0);
@@ -136,65 +102,6 @@ internal class FieldAdder
         var accessorAsm = set.FindModifiableAssembly(accessor.DeclaringType)!;
         accessorAsm.NeedsReload = true;
         accessorAsm.Modified = true;
-    }
-
-    private void AddInjectionHelper(MethodDefinition accessor, FieldDefinition newField)
-    {
-        // ldtoken newfield
-        // ldarg 0
-        // ldarg 0
-        // ldfld complist
-        // call InjectionHelper.TryInject
-
-        var (initMethod, listField) = GetInjectionSite(accessor)!.Value;
-
-        var body = initMethod.Body;
-        var retInst = body.Instructions.Last();
-        body.Instructions.Remove(retInst);
-
-        body.GetILProcessor().Emit(OpCodes.Ldtoken, newField);
-        body.GetILProcessor().Emit(OpCodes.Ldarg_0);
-        body.GetILProcessor().Emit(OpCodes.Ldarg_0);
-        body.GetILProcessor().Emit(OpCodes.Ldfld, listField);
-        body.GetILProcessor().Emit(
-            OpCodes.Call,
-            initMethod.Module.ImportReference(AccessTools.Method(typeof(InjectionHelper), nameof(InjectionHelper.TryInject)))
-        );
-
-        body.Instructions.Add(retInst);
-    }
-
-    internal void AddComponentInjection(Type targetType, Type compType, string initMethod, string listField)
-    {
-        AddComponentInjection(
-            set.ReflectionToCecil(targetType),
-            set.ReflectionToCecil(compType),
-            initMethod,
-            listField
-        );
-    }
-
-    internal void AddComponentInjection(TypeDefinition targetType, TypeDefinition compType, string initMethod, string listField)
-    {
-        injectionSites[(targetType, compType)] = (
-            targetType.Methods.FirstOrDefault(m => m.Name == initMethod),
-            targetType.Fields.FirstOrDefault(m => m.Name == listField)
-        );
-    }
-
-    private (MethodDefinition, FieldDefinition)? GetInjectionSite(MethodDefinition accessor)
-    {
-        var possibleTypes =
-            from targetType in FirstParameterTypeResolved(accessor)!.BaseTypesAndSelfResolved()
-            from fieldType in FieldType(accessor).Resolve().BaseTypesAndSelfResolved()
-            select (targetType, fieldType);
-
-        // SingleOrDefault is used to throw on ambiguity
-        var siteId = possibleTypes.SingleOrDefault(p => injectionSites.ContainsKey(p));
-        if (siteId == default)
-            return null;
-
-        return injectionSites[siteId];
     }
 
     private static TypeReference FieldType(MethodDefinition accessor)
@@ -230,16 +137,6 @@ internal class FieldAdder
             .Where(t => t.IsSealed && t.IsAbstract) // IsStatic
             .SelectMany(t => t.Methods)
             .Where(m => m.HasCustomAttribute(typeof(PrepatcherFieldAttribute).FullName));
-    }
-
-    private static IEnumerable<TypeReference> GenericArgumentsOf(TypeReference t)
-    {
-        return t is GenericInstanceType gType ? gType.GenericArguments : Enumerable.Empty<TypeReference>();
-    }
-
-    private static bool HasInjection(MethodDefinition accessor)
-    {
-        return accessor.HasCustomAttribute(typeof(InjectComponentAttribute).FullName);
     }
 }
 

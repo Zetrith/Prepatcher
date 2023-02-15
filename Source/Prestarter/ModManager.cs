@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -12,10 +14,13 @@ namespace Prestarter;
 internal class ModManager
 {
     private List<string> inactive = new();
-    private List<string> active;
+    private List<string> active; // Mod ids with postfixes
 
     private List<string> filteredInactive;
     private List<string> filteredActive;
+
+    private Dictionary<string, string> modWarnings = new();
+    private HashSet<string> missingAboutXml = new();
 
     private int inactiveGroup;
     private int activeGroup;
@@ -74,6 +79,16 @@ internal class ModManager
 
         filteredInactive = inactive.Where(m => m.Contains(inactiveFilter)).ToList();
         filteredActive = active.Where(m => m.Contains(activeFilter)).ToList();
+
+        modWarnings = GetModWarnings(active.Select(m => ModData(m)!).ToList());
+
+        foreach (var mod in ModLister.AllInstalledMods)
+        {
+            var aboutXmlPath =
+                GenFile.ResolveCaseInsensitiveFilePath(mod.RootDir.FullName + Path.DirectorySeparatorChar + "About", "About.xml");
+            if (!new FileInfo(aboutXmlPath).Exists)
+                missingAboutXml.Add(mod.PackageId);
+        }
     }
 
     internal void Draw(Rect rect)
@@ -124,8 +139,7 @@ internal class ModManager
         if (KeyBindingDefOf.Accept.KeyDownEvent)
             Launch();
 
-        if (Event.current.type == EventType.Repaint)
-            HandleDrag();
+        HandleDrag();
 
         ModLists.PostUpdate();
     }
@@ -177,16 +191,17 @@ internal class ModManager
 
     private void HandleDrag()
     {
-        draggedMod = null;
-
-        if (ReorderableWidget.Dragging && ReorderableWidget.GetDraggedIndex >= 0)
+        if (draggedMod == null && ReorderableWidget.Dragging && ReorderableWidget.GetDraggedIndex >= 0)
         {
             var modList = ReorderableWidget.GetDraggedFromGroupID == activeGroup ? filteredActive : filteredInactive;
             if (!modList.NullOrEmpty() && modList.Count > ReorderableWidget.GetDraggedIndex)
                 draggedMod = modList[ReorderableWidget.GetDraggedIndex];
         }
 
-        if (DraggedMods.Count > 0)
+        if (draggedMod != null && !ReorderableWidget.Dragging)
+            draggedMod = null;
+
+        if (Event.current.type == EventType.Repaint && DraggedMods.Count > 0)
         {
             var mousePos = UI.MousePositionOnUIInverted;
             var absRect = ReorderableWidget.reorderables[ReorderableWidget.draggingReorderable].absRect;
@@ -213,7 +228,7 @@ internal class ModManager
             if (index > 30)
                 break;
             Rect r = new Rect(0f, index * ItemHeight, modItemWidth, ItemHeight);
-            DoModRow(r, mod, index, true);
+            DoModRow(r, mod, index, true, false);
             index++;
         }
     }
@@ -249,7 +264,7 @@ internal class ModManager
             ReorderableWidget.Reorderable(group, itemRect, highlightDragged: false);
 
             if (itemRect.y >= viewInOutStart && itemRect.y <= viewInOutEnd)
-                DoModRow(itemRect, item, itemIndex, false);
+                DoModRow(itemRect, item, itemIndex, false, false);
 
             if (checkScroll && lastSelectedIndex == itemIndex)
             {
@@ -294,7 +309,7 @@ internal class ModManager
 
             using (MpStyle.Set(Color.gray))
                 if (itemRect.y >= viewInOutStart && itemRect.y <= viewInOutEnd)
-                    DoModRow(itemRect, item, itemIndex, false);
+                    DoModRow(itemRect, item, itemIndex, false, true);
 
             itemIndex++;
         }
@@ -302,11 +317,11 @@ internal class ModManager
         Widgets.EndScrollView();
     }
 
-    private void DoModRow(Rect rect, string mod, int index, bool isDragged)
+    private void DoModRow(Rect rect, string mod, int index, bool isDragged, bool preview)
     {
         modItemWidth = rect.width;
 
-        if (!isDragged && DraggedMods.Contains(mod))
+        if (!DraggedMods.NullOrEmpty() && !isDragged && DraggedMods.Contains(mod))
             return;
 
         if (selectedMods.Contains(mod) && !ReorderableWidget.Dragging && ModLists.CurrentList == null)
@@ -318,8 +333,11 @@ internal class ModManager
         DrawContentSource(rect, ModSource(mod), ItemHeight);
         rect.xMin += ItemHeight + 2f;
 
+        if (!isDragged && Mouse.IsOver(rect))
+            TooltipHandler.TipRegion(rect, new TipSignal(ModTooltip(mod), mod.GetHashCode() * 3311));
+
         using (MpStyle.Set(compact ? GameFont.Tiny : GameFont.Small))
-        using (MpStyle.Set(ModData(mod) == null ? new Color(0.3f, 0.3f, 0.3f) : GUI.color))
+        using (MpStyle.Set(ModColor(mod, preview) * GUI.color))
             Widgets.Label(rect, ModShortName(mod));
 
         if (isDragged)
@@ -330,6 +348,37 @@ internal class ModManager
 
         if (Widgets.ButtonInvisible(rect))
             HandleModClick(mod, index);
+    }
+
+    private Color ModColor(string mod, bool preview)
+    {
+        if (ModData(mod) is not { } metaData)
+            return Color.gray;
+        if (!preview && modWarnings.ContainsKey(mod))
+            return Color.red;
+        if (missingAboutXml.Contains(mod))
+            return new Color(0.6f, 0.6f, 0f, 1f);
+        if (!metaData.VersionCompatible)
+            return Color.yellow;
+        return Color.white;
+    }
+
+    private string ModTooltip(string mod)
+    {
+        if (ModData(mod) is not { } metaData)
+            return $"Id: {mod}\n\nMod not installed";
+
+        if (missingAboutXml.Contains(mod))
+            return "Missing About.xml\n\nThe mod is possibly wrongly installed.";
+
+        var tooltip = $"Id: {metaData.PackageIdPlayerFacing}\nAuthor: {metaData.AuthorsString}";
+        if (modWarnings.ContainsKey(mod))
+            tooltip += "\n\n" + modWarnings[mod];
+
+        if (!metaData.VersionCompatible)
+            tooltip += "\n\nThis mod is incompatible with current version of the game.";
+
+        return tooltip;
     }
 
     private void HandleModClick(string mod, int index)
@@ -517,10 +566,12 @@ internal class ModManager
 
     private void Launch()
     {
-        ModsConfig.SetActiveToList(active);
-        ModsConfig.Save();
-
-        LongEventHandler.QueueLongEvent(PrestarterInit.DoLoad, "", true, null, false);
+        LongEventHandler.QueueLongEvent(() =>
+        {
+            ModsConfig.SetActiveToList(active);
+            ModsConfig.Save();
+            PrestarterInit.DoLoad();
+        }, "", true, null, false);
     }
 
     internal void SetActive(ModList modList)
@@ -545,7 +596,9 @@ internal class ModManager
         var missingModStrings = missingMods.Select(i => " - " + modList.names[i] + " (" + modList.ids[i] + ")");
         if (missingMods.Any())
             Find.WindowStack.Add(new Dialog_MessageBox(
-                $"Mod list activated with missing mods ignored:\n\n{missingModStrings.ToLineList()}", "OK"));
+                $"Mod list activated with missing mods ignored:\n\n{missingModStrings.ToLineList()}",
+                "OK"
+                ));
     }
 
     private void TrySortMods()
@@ -585,6 +638,64 @@ internal class ModManager
         active = newActive;
 
         RecacheLists();
+    }
+
+    private static Dictionary<string, string> GetModWarnings(List<ModMetaData> mods)
+    {
+	    Dictionary<string, string> result = new Dictionary<string, string>();
+	    for (int i = 0; i < mods.Count; i++)
+	    {
+		    int index = i;
+		    var modMetaData = mods[index];
+		    var warningBuilder = new StringBuilder("");
+
+            var incompatible = FindConflicts(modMetaData.IncompatibleWith, null);
+		    if (incompatible.Any())
+                warningBuilder.AppendLine("ModIncompatibleWithTip".Translate(incompatible.ToCommaList(useAnd: true)));
+
+            var loadBefore = FindConflicts(modMetaData.LoadBefore, (beforeMod) => mods.IndexOf(beforeMod) < index);
+		    if (loadBefore.Any())
+                warningBuilder.AppendLine("ModMustLoadBefore".Translate(loadBefore.ToCommaList(useAnd: true)));
+
+            var forceLoadBefore = FindConflicts(modMetaData.ForceLoadBefore, (beforeMod) => mods.IndexOf(beforeMod) < index);
+		    if (forceLoadBefore.Any())
+                warningBuilder.AppendLine("ModMustLoadBefore".Translate(forceLoadBefore.ToCommaList(useAnd: true)));
+
+            var forceLoadAfter = FindConflicts(modMetaData.LoadAfter, (afterMod) => mods.IndexOf(afterMod) > index);
+		    if (forceLoadAfter.Any())
+                warningBuilder.AppendLine("ModMustLoadAfter".Translate(forceLoadAfter.ToCommaList(useAnd: true)));
+
+            var loadAfter = FindConflicts(modMetaData.ForceLoadAfter, (afterMod) => mods.IndexOf(afterMod) > index);
+		    if (loadAfter.Any())
+                warningBuilder.AppendLine("ModMustLoadAfter".Translate(loadAfter.ToCommaList(useAnd: true)));
+
+            if (modMetaData.Dependencies.Any())
+		    {
+			    var missingDeps = modMetaData.UnsatisfiedDependencies();
+			    if (missingDeps.Any())
+                    warningBuilder.AppendLine("ModUnsatisfiedDependency".Translate(missingDeps.ToCommaList(useAnd: true)));
+            }
+
+            var warningString = warningBuilder.ToString().TrimEndNewlines();
+            if (!warningString.NullOrEmpty())
+		        result.Add(modMetaData.PackageId, warningString);
+	    }
+
+	    return result;
+    }
+
+    private static List<string> FindConflicts(List<string> modsToCheck, Func<ModMetaData, bool>? predicate)
+    {
+        var list = new List<string>();
+        foreach (var item in modsToCheck)
+        {
+            ModMetaData activeModWithIdentifier = ModLister.GetActiveModWithIdentifier(item, ignorePostfix: true);
+            if (activeModWithIdentifier != null && (predicate == null || predicate(activeModWithIdentifier)))
+            {
+                list.Add(activeModWithIdentifier.Name);
+            }
+        }
+        return list;
     }
 
     private static void DrawContentSource(Rect r, ContentSource source, float size)

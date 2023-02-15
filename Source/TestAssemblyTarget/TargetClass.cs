@@ -6,6 +6,16 @@ public class TargetClass
 {
 }
 
+public class SecondTargetClass
+{
+    public readonly TargetClass inner;
+
+    public SecondTargetClass(TargetClass inner)
+    {
+        this.inner = inner;
+    }
+}
+
 public struct TargetStruct
 {
 }

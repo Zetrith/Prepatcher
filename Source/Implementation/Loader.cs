@@ -27,7 +27,7 @@ internal static class Loader
     {
         origAsm = typeof(Game).Assembly;
 
-        // Reinit after mod list potential changes from Prestarter
+        // Reinit after potential mod list changes from Prestarter
         using (StopwatchScope.Measure("Reinit mods"))
         {
             LoadedModManager.runningMods.Clear();

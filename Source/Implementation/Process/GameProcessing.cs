@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using MonoMod.Utils;
 using RimWorld.Planet;
 using UnityEngine;
 using Verse;
@@ -36,18 +37,37 @@ internal static class GameProcessing
             modAsms.Add(modAssembly);
         }
 
+        foreach (var mp in new[]
+                 {
+                     ("RimWorld.Building_GeneExtractor", "Finish"),
+("RimWorld.ITab_Pawn_Visitor", "FillTab"),
+("RimWorld.FloatMenuMakerMap", "AddDraftedOrders"),
+("RimWorld.FloatMenuMakerMap", "AddHumanlikeOrders"),
+("RimWorld.Dialog_BillConfig", "DoWindowContents"),
+("RimWorld.Building_AncientMechRemains", "Tick"),
+                 })
+        {
+            var m = asmCSharp.ModuleDefinition.GetType(mp.Item1).FindMethod(mp.Item2);
+            using (StopwatchScope.Measure(m.FullName))
+                Lg.Info(m.Body.Instructions.Count() + "");
+        }
+
+        // Other code assumes that these always get reloaded
         asmCSharp.NeedsReload = true;
         set.FindModifiableAssembly("0Harmony")!.NeedsReload = true;
 
+        // Field addition
         var fieldAdder = new FieldAdder(set);
-        AddComponentInjections(fieldAdder);
+        RegisterInjections(fieldAdder);
         fieldAdder.ProcessAllAssemblies();
 
-        FreePatcher.RunPatches(modAsms, asmCSharp);
+        // Free patching
+        //FreePatcher.RunPatches(modAsms, asmCSharp);
 
+        // Reload the assemblies
         Reloader.Reload(set, LoadAssembly);
 
-        if (GenCommandLine.CommandLineArgPassed("dumpandexit"))
+        if (GenCommandLine.CommandLineArgPassed("patchandexit"))
             Application.Quit();
     }
 
@@ -68,30 +88,30 @@ internal static class GameProcessing
         }
     }
 
-    private static void AddComponentInjections(FieldAdder fieldAdder)
+    private static void RegisterInjections(FieldAdder fieldAdder)
     {
-        fieldAdder.AddComponentInjection(
+        fieldAdder.RegisterInjection(
             typeof(ThingWithComps),
             typeof(ThingComp),
             nameof(ThingWithComps.InitializeComps),
             nameof(ThingWithComps.comps)
         );
 
-        fieldAdder.AddComponentInjection(
+        fieldAdder.RegisterInjection(
             typeof(Map),
             typeof(MapComponent),
             nameof(Map.FillComponents),
             nameof(Map.components)
         );
 
-        fieldAdder.AddComponentInjection(
+        fieldAdder.RegisterInjection(
             typeof(World),
             typeof(WorldComponent),
             nameof(World.FillComponents),
             nameof(World.components)
         );
 
-        fieldAdder.AddComponentInjection(
+        fieldAdder.RegisterInjection(
             typeof(Game),
             typeof(GameComponent),
             nameof(Game.FillComponents),
