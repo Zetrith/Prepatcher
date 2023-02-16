@@ -5,9 +5,9 @@
 /// The method has to be in the same class as the PrepatcherField.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
-public class ValueFactoryAttribute : Attribute
+public class ValueInitializerAttribute : Attribute
 {
-    public ValueFactoryAttribute(string factoryMethod)
+    public ValueInitializerAttribute(string initializerMethod)
     {
     }
 }

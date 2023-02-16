@@ -40,15 +40,15 @@ internal class TestBase
         testAsm.ProcessAttributes = true;
 
         var typeThingWithComps =
-            targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(ThingWithComps)}");
+            targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(BaseWithComps)}");
         var typeThingComp =
-            targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(ThingComp)}");
+            targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(BaseComp)}");
 
         fieldAdder.RegisterInjection(
             typeThingWithComps,
             typeThingComp,
-            nameof(ThingWithComps.InitComps),
-            nameof(ThingWithComps.comps)
+            nameof(BaseWithComps.InitComps),
+            nameof(BaseWithComps.comps)
         );
     }
 

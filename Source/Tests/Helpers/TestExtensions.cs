@@ -8,4 +8,9 @@ public static class TestExtensions
     {
         yield return obj;
     }
+
+    internal static void Do<T>(this T obj, Action<T> action)
+    {
+        action(obj);
+    }
 }

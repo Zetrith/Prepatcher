@@ -7,38 +7,69 @@ public static class Injections
 {
     [PrepatcherField]
     [InjectComponent]
-    private static extern MyComponent MyComp(this ThingWithComps target);
+    private static extern SomeComp SomeComp(this BaseWithComps target);
 
     [PrepatcherField]
     [InjectComponent]
-    private static extern ThingComp MyCompBase(this ThingWithComps target);
+    private static extern DerivedMyComponent MyComp(this BaseWithComps target);
 
     [PrepatcherField]
     [InjectComponent]
-    private static extern MyComponent MyCompOnSubType(this SubThingWithComps target);
+    private static extern MyComponent MyCompBase(this BaseWithComps target);
 
-    public static bool TestCompInjection()
+    [PrepatcherField]
+    [InjectComponent]
+    private static extern DerivedMyComponent MyCompOnSubType(this DerivedWithComps target);
+
+    [PrepatcherField]
+    [InjectComponent]
+    private static extern MyComponent MyCompBaseOnSubType(this DerivedWithComps target);
+
+    // Exact comp type, initializer type == target type
+    public static BaseComp TestSomeCompInjection()
     {
-        var thing = new ThingWithComps { compType = typeof(MyComponent) };
+        var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(SomeComp) } };
         thing.InitComps();
-        return thing.MyComp() == thing.comps[0];
+        return thing.SomeComp();
     }
 
-    public static bool TestCompBaseInjection()
+    // Exact comp type, initializer type == target type
+    public static BaseComp TestCompInjection()
     {
-        var thing = new ThingWithComps { compType = typeof(MyComponent) };
+        var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(SomeComp) } };
         thing.InitComps();
-        return thing.MyCompBase() == thing.comps[0];
+        return thing.MyComp();
     }
 
-    public static bool TestCompInjectionOnSubType()
+    // Sub comp type, initializer type == target type
+    public static BaseComp TestCompBaseInjection()
     {
-        var thing = new SubThingWithComps { compType = typeof(MyComponent) };
+        var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(SomeComp) } };
         thing.InitComps();
-        return thing.MyCompOnSubType() == thing.comps[0];
+        return thing.MyCompBase();
+    }
+
+    // Exact comp type, initializer type == super of target type
+    public static BaseComp TestCompInjectionOnSubType()
+    {
+        var thing = new DerivedWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(SomeComp) } };
+        thing.InitComps();
+        return thing.MyCompOnSubType();
+    }
+
+    // Sub comp type, initializer type == super of target type
+    public static BaseComp TestCompBaseInjectionOnSubType()
+    {
+        var thing = new DerivedWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(SomeComp) } };
+        thing.InitComps();
+        return thing.MyCompBaseOnSubType();
     }
 }
 
-public class MyComponent : ThingComp
+public class MyComponent : BaseComp
+{
+}
+
+public class DerivedMyComponent : MyComponent
 {
 }

@@ -34,13 +34,13 @@ public static class BadFields
     private static extern ref int FailUnresolvable<T>(List<T> target);
 
     [PrepatcherField]
-    private static extern ref int FailInterface(TargetInterface target);
+    private static extern ref int FailInterface(ITarget target);
 
     [PrepatcherField]
     [InjectComponent]
-    private static extern ref ThingComp FailInjectionByRef(ThingWithComps target);
+    private static extern ref BaseComp FailInjectionByRef(BaseWithComps target);
 
     [PrepatcherField]
     [InjectComponent]
-    private static extern ThingComp FailUnknownInjection(TargetClass target);
+    private static extern BaseComp FailUnknownInjection(TargetClass target);
 }

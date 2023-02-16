@@ -14,20 +14,20 @@ public static class DefaultValues
     public static extern ref string MyStringDefault(this TargetClass target);
 
     [PrepatcherField]
-    [ValueFactory(nameof(IntParameterlessFactory))]
-    public static extern ref int MyIntParameterlessFactory(this TargetClass target);
+    [ValueInitializer(nameof(IntParameterlessInitializer))]
+    public static extern ref int MyIntParameterless(this TargetClass target);
 
     [PrepatcherField]
-    [ValueFactory(nameof(IntThisFactory))]
-    public static extern ref int MyIntThisFactory(this TargetClass target);
+    [ValueInitializer(nameof(IntThisInitializer))]
+    public static extern ref int MyIntFromThis(this TargetClass target);
 
     [PrepatcherField]
-    [ValueFactory(nameof(ObjectThisFactory))]
-    public static extern ref SecondTargetClass MyObjectThisFactory(this TargetClass target);
+    [ValueInitializer(nameof(ObjectThisInitializer))]
+    public static extern ref SecondTargetClass MyObjectFromThis(this TargetClass target);
 
-    public static int IntParameterlessFactory() => 1;
+    public static int IntParameterlessInitializer() => 1;
 
-    public static int IntThisFactory(TargetClass? obj) => obj != null ? 1 : -1;
+    public static int IntThisInitializer(TargetClass? obj) => obj != null ? 1 : -1;
 
-    public static SecondTargetClass ObjectThisFactory(TargetClass obj) => new(obj);
+    public static SecondTargetClass ObjectThisInitializer(TargetClass obj) => new(obj);
 }

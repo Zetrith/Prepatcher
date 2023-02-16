@@ -37,21 +37,6 @@ internal static class GameProcessing
             modAsms.Add(modAssembly);
         }
 
-        foreach (var mp in new[]
-                 {
-                     ("RimWorld.Building_GeneExtractor", "Finish"),
-("RimWorld.ITab_Pawn_Visitor", "FillTab"),
-("RimWorld.FloatMenuMakerMap", "AddDraftedOrders"),
-("RimWorld.FloatMenuMakerMap", "AddHumanlikeOrders"),
-("RimWorld.Dialog_BillConfig", "DoWindowContents"),
-("RimWorld.Building_AncientMechRemains", "Tick"),
-                 })
-        {
-            var m = asmCSharp.ModuleDefinition.GetType(mp.Item1).FindMethod(mp.Item2);
-            using (StopwatchScope.Measure(m.FullName))
-                Lg.Info(m.Body.Instructions.Count() + "");
-        }
-
         // Other code assumes that these always get reloaded
         asmCSharp.NeedsReload = true;
         set.FindModifiableAssembly("0Harmony")!.NeedsReload = true;
@@ -62,7 +47,7 @@ internal static class GameProcessing
         fieldAdder.ProcessAllAssemblies();
 
         // Free patching
-        //FreePatcher.RunPatches(modAsms, asmCSharp);
+        FreePatcher.RunPatches(modAsms, asmCSharp);
 
         // Reload the assemblies
         Reloader.Reload(set, LoadAssembly);

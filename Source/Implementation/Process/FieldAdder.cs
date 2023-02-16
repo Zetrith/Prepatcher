@@ -48,6 +48,12 @@ internal partial class FieldAdder
 
         if (HasInjection(accessor))
             PatchInjectionSite(accessor, newField);
+
+        if (GetExplicitDefaultValue(accessor) is { } attr)
+            PatchCtorsWithDefault(newField, attr);
+
+        if (GetValueInitializer(accessor) is { } initializerAttr)
+            PatchCtorsWithInitializer(accessor, newField, initializerAttr);
     }
 
     private FieldDefinition AddFieldToTarget(MethodDefinition accessor)

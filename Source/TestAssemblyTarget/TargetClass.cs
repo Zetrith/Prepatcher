@@ -28,26 +28,36 @@ public class TargetGeneric3<T,U,W>
 {
 }
 
-public interface TargetInterface
+public interface ITarget
 {
 }
 
-public abstract class ThingComp
+public abstract class BaseComp
+{
+    public BaseWithComps parent;
+}
+
+public class SomeComp : BaseComp
 {
 }
 
-public class ThingWithComps
+public class BaseWithComps
 {
-    public List<ThingComp> comps = new();
-    public Type compType;
+    public List<BaseComp> comps = new();
+    public Type[] compTypes;
 
     public void InitComps()
     {
-        comps.Add((ThingComp)Activator.CreateInstance(compType));
+        foreach (var type in compTypes)
+        {
+            var comp = (BaseComp)Activator.CreateInstance(type);
+            comp.parent = this;
+            comps.Add(comp);
+        }
     }
 }
 
-public class SubThingWithComps : ThingWithComps
+public class DerivedWithComps : BaseWithComps
 {
 }
 

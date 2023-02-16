@@ -21,11 +21,22 @@ internal partial class FieldAdder
         );
     }
 
-    internal void RegisterInjection(TypeDefinition targetType, TypeDefinition compType, string initMethod, string listField)
+    internal void RegisterInjection(TypeDefinition targetType, TypeDefinition compType, string initMethod, string listFieldName)
     {
+        var method = targetType.Methods.FirstOrDefault(m => m.Name == initMethod);
+        if (method == null)
+            throw new Exception($"Injection site {targetType}:{initMethod} not found");
+
+        var listField = targetType.Fields.FirstOrDefault(m => m.Name == listFieldName);
+        if (listField == null)
+            throw new Exception($"Component list field {targetType}:{listFieldName} not found");
+
+        if (method!.Body.Instructions.Last().OpCode != OpCodes.Ret)
+            throw new Exception($"Expected last instruction of injection site {targetType}:{initMethod} to be Ret");
+
         injectionSites[(targetType, compType)] = (
-            targetType.Methods.FirstOrDefault(m => m.Name == initMethod),
-            targetType.Fields.FirstOrDefault(m => m.Name == listField)
+            method,
+            listField
         );
     }
 
