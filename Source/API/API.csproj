@@ -10,6 +10,7 @@
         <AssemblyName>0PrepatcherAPI</AssemblyName>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Zetrith</Authors>
+        <Version>1.1.0</Version>
         <Description>The API for Prepatcher, an assembly rewriting library for RimWorld.</Description>
         <PackageProjectUrl>https://github.com/Zetrith/Prepatcher</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

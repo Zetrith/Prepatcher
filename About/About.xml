@@ -7,17 +7,6 @@
   </supportedVersions>
   <author>Zetrith</author>
   <url>https://github.com/Zetrith/Prepatcher</url>
-  <modDependencies>
-    <li>
-      <packageId>brrainz.harmony</packageId>
-      <displayName>Harmony</displayName>
-      <downloadUrl>https://github.com/pardeike/HarmonyRimWorld/releases/</downloadUrl>
-      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
-    </li>
-  </modDependencies>
-  <loadAfter>
-    <li>brrainz.harmony</li>
-  </loadAfter>
   <loadBefore>
 	<li>Ludeon.RimWorld</li>
   </loadBefore>

@@ -13,13 +13,21 @@ Download the mod zip from [Releases](https://github.com/Zetrith/Prepatcher/relea
 
 Clicking *Code* > *Download ZIP* on GitHub's main page won't work. Please use Releases.
 
-Prepatcher depends on [Harmony](https://github.com/pardeike/HarmonyRimWorld). Install it first in the mod list and put Prepatcher right below.
+Put Prepatcher first in the mod list. It has no dependencies on other mods.
+
+Prepatcher is a provider of the Harmony library for RimWorld mods and can be used instead of [HarmonyRimWorld](https://github.com/pardeike/HarmonyRimWorld). It patches the mod loading system so that:
+
+- `zetrith.prepatcher` (this mod) satisfies dependencies on `brrainz.harmony`
+- Mods needing to load after `brrainz.harmony` also need to load after `zetrith.prepatcher`
+
+Having both Prepatcher and the Harmony mod active won't cause any problems.
+
 
 ### Modders
 
 Add the [`Zetrith.Prepatcher`](https://www.nuget.org/packages/Zetrith.Prepatcher) nuget package to your mod's project:
 
-`<PackageReference Include="Zetrith.Prepatcher" Version="1.0.0" ExcludeAssets="runtime" />`
+`<PackageReference Include="Zetrith.Prepatcher" Version="1.1.0" ExcludeAssets="runtime" />`
 
 Similar to Harmony, the package distributes an API (currently just attributes) and the actual runtime library is installed by the user once using the mod downloaded from here.
 
