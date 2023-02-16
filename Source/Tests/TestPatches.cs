@@ -45,6 +45,7 @@ internal class TestPatches : TestBase
     public void TestDefaultValues()
     {
         var targetObj = new TargetClass();
+
         Assert.That(targetObj.MyIntDefault(), Is.EqualTo(1));
         Assert.That(targetObj.MyStringDefault(), Is.EqualTo("a"));
     }
@@ -61,6 +62,13 @@ internal class TestPatches : TestBase
 #pragma warning disable NUnit2009
         Assert.That(targetObj.MyObjectFromThis(), Is.EqualTo(targetObj.MyObjectFromThis()));
 #pragma warning restore NUnit2009
+
+        Assert.That(new DerivedCtorsClass().MyIntCounter(), Is.EqualTo(1));
+        Assert.That(new DerivedCtorsClass(1).MyIntCounter(), Is.EqualTo(1));
+        Assert.That(new DerivedCtorsClass(0, 0).MyIntCounter(), Is.EqualTo(1));
+        Assert.That(new DerivedCtorsClass(1, 0).MyIntCounter(), Is.EqualTo(1));
+        Assert.That(new DerivedCtorsClass(2, 0).MyIntCounter(), Is.EqualTo(1));
+        Assert.That(new DerivedCtorsClass("a").MyIntCounter(), Is.EqualTo(1));
     }
 
     [Test]

@@ -14,7 +14,7 @@
         <PackageProjectUrl>https://github.com/Zetrith/Prepatcher</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/Zetrith/Prepatcher</RepositoryUrl>
-        <PackageId>PrepatcherAPI</PackageId>
+        <PackageId>Zetrith.Prepatcher</PackageId>
     </PropertyGroup>
 
   <ItemGroup>

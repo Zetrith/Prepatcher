@@ -1,6 +1,11 @@
 # Prepatcher
 Structured assembly rewriting library/mod for RimWorld
 
+The project has three main logical components:
+- **Assembly rewriter** - in principle platform-agnostic
+- **Assembly reloader** - specific to the Mono runtime used by RimWorld's Unity version
+- **Mod manager** (named Prestarter) - specific to RimWorld
+
 ## Installation
 
 ### Users
@@ -12,9 +17,9 @@ Prepatcher depends on [Harmony](https://github.com/pardeike/HarmonyRimWorld). In
 
 ### Modders
 
-Add the `PrepatcherAPI` nuget package to your mod's project:
+Add the [`Zetrith.Prepatcher`](https://www.nuget.org/packages/Zetrith.Prepatcher) nuget package to your mod's project:
 
-`<PackageReference Include="PrepatcherAPI" Version="1.0.0" ExcludeAssets="runtime" />`
+`<PackageReference Include="Zetrith.Prepatcher" Version="1.0.0" ExcludeAssets="runtime" />`
 
 Similar to Harmony, the package distributes an API (currently just attributes) and the actual runtime library is installed by the user once using the mod downloaded from here.
 

@@ -11,6 +11,8 @@ internal class PrepatcherMod : Mod
         Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
+        HarmonyPatches.PatchModLoading();
+
         if (DataStore.startedOnce)
         {
             Lg.Info($"Restarted with the patched assembly, going silent.");

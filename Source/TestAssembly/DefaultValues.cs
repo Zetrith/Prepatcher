@@ -1,4 +1,5 @@
-﻿using Prepatcher;
+﻿using System.Runtime.Remoting.Messaging;
+using Prepatcher;
 using TestAssemblyTarget;
 
 namespace Tests;
@@ -25,9 +26,15 @@ public static class DefaultValues
     [ValueInitializer(nameof(ObjectThisInitializer))]
     public static extern ref SecondTargetClass MyObjectFromThis(this TargetClass target);
 
+    [PrepatcherField]
+    [ValueInitializer(nameof(CounterInitializer))]
+    public static extern ref int MyIntCounter(this DerivedCtorsClass target);
+
     public static int IntParameterlessInitializer() => 1;
 
     public static int IntThisInitializer(TargetClass? obj) => obj != null ? 1 : -1;
 
     public static SecondTargetClass ObjectThisInitializer(TargetClass obj) => new(obj);
+
+    public static int CounterInitializer(DerivedCtorsClass ctors) => ++ctors.counter;
 }

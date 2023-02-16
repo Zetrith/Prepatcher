@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection.Emit;
 using System.Threading;
 using HarmonyLib;
@@ -13,6 +14,25 @@ internal static class HarmonyPatches
 {
     private static bool runOnce;
     private static Harmony harmony = new("prepatcher");
+
+    internal static void PatchModLoading()
+    {
+        // If a mod needs to loadAfter brrainz.harmony, then also loadAfter zetrith.prepatcher
+        harmony.Patch(
+            typeof(ModMetaData.ModMetaDataInternal).GetMethod("InitVersionedData"),
+            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(InitVersionedDataPostfix))
+        );
+
+        // Let Prepatcher satisfy modDependencies on brrainz.harmony
+        harmony.Patch(
+            typeof(ModDependency).GetProperty("IsSatisfied")!.GetGetMethod(),
+            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(IsSatisfiedPostfix))
+        );
+
+        // Fixup already loaded mods
+        foreach (var modMeta in ModLister.AllInstalledMods.Select(m => m.meta))
+            InitVersionedDataPostfix(modMeta);
+    }
 
     internal static void DoHarmonyPatchesForMinimalInit()
     {
@@ -127,5 +147,19 @@ internal static class HarmonyPatches
     private static bool LogErrorPrefix(string text)
     {
         return !text.Contains("ThreadAbortException");
+    }
+
+    private static void InitVersionedDataPostfix(ModMetaData.ModMetaDataInternal __instance)
+    {
+        if (__instance.loadAfter.Any(s => s.ToLowerInvariant() == "brrainz.harmony") &&
+            !__instance.loadAfter.Any(s => s.ToLowerInvariant() == "zetrith.prepatcher"))
+            __instance.loadAfter.Add("zetrith.prepatcher");
+    }
+
+    private static bool IsSatisfiedPostfix(bool result, ModDependency __instance)
+    {
+        return result ||
+               __instance.packageId.ToLowerInvariant() == "brrainz.harmony" &&
+               ModLister.GetActiveModWithIdentifier("zetrith.prepatcher", ignorePostfix: true) != null;
     }
 }

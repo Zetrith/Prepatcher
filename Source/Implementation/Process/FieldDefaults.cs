@@ -19,14 +19,15 @@ internal partial class FieldAdder
 
         var opcode = GetConstantOpCode(defaultValue.GetType())!.Value;
 
-        InsertDefaultValueInstructions(newField.DeclaringType, new []
+        ReplaceRetsInCtors(newField.DeclaringType, new []
         {
             Instruction.Create(OpCodes.Ldarg_0),
             new Instruction(
                 opcode,
                 opcode == OpCodes.Ldc_I4 ? Convert.ToInt32(defaultValue) : defaultValue
             ),
-            Instruction.Create(OpCodes.Stfld, newField)
+            Instruction.Create(OpCodes.Stfld, newField),
+            Instruction.Create(OpCodes.Ret)
         });
     }
 
@@ -34,17 +35,22 @@ internal partial class FieldAdder
     {
         var initializer = accessor.DeclaringType.FindMethod((string)attribute.ConstructorArguments.First().Value);
 
-        InsertDefaultValueInstructions(newField.DeclaringType, new []
+        ReplaceRetsInCtors(newField.DeclaringType, new []
         {
             Instruction.Create(OpCodes.Ldarg_0),
             Instruction.Create(initializer.Parameters.Count() == 1 ? OpCodes.Ldarg_0 : OpCodes.Nop),
             Instruction.Create(OpCodes.Call, newField.Module.ImportReference(initializer)),
-            Instruction.Create(OpCodes.Stfld, newField)
+            Instruction.Create(OpCodes.Stfld, newField),
+            Instruction.Create(OpCodes.Ret)
         });
     }
 
-    private void InsertDefaultValueInstructions(TypeDefinition typeDef, IEnumerable<Instruction> newInsts)
+    private void ReplaceRetsInCtors(TypeDefinition typeDef, IEnumerable<Instruction> replacement)
     {
+        var replacementList = replacement.ToList();
+        var firstReplacement = replacementList[0];
+        replacementList.RemoveAt(0);
+
         foreach (var ctor in typeDef.GetConstructors().Where(c => !c.IsStatic))
         {
             if (CallsAThisCtor(ctor)) continue;
@@ -55,8 +61,12 @@ internal partial class FieldAdder
             {
                 var inst = insts.ElementAt(i);
                 if (inst.OpCode != OpCodes.Ret) continue;
-                foreach (var newInst in newInsts.Reverse())
-                    insts.Insert(i, newInst);
+
+                // Preserve jumps to Ret
+                inst.OpCode = firstReplacement.OpCode;
+                inst.Operand = firstReplacement.Operand;
+
+                insts.InsertRange(i + 1, replacementList);
             }
         }
     }

@@ -369,7 +369,7 @@ internal class ModManager
             return $"Id: {mod}\n\nMod not installed";
 
         if (missingAboutXml.Contains(mod))
-            return "Missing About.xml\n\nThe mod is possibly wrongly installed.";
+            return "Missing About.xml\n\nThis mod isn't installed correctly.";
 
         var tooltip = $"Id: {metaData.PackageIdPlayerFacing}\nAuthor: {metaData.AuthorsString}";
         if (modWarnings.ContainsKey(mod))
@@ -640,7 +640,7 @@ internal class ModManager
         RecacheLists();
     }
 
-    private static Dictionary<string, string> GetModWarnings(List<ModMetaData> mods)
+    private Dictionary<string, string> GetModWarnings(List<ModMetaData> mods)
     {
 	    Dictionary<string, string> result = new Dictionary<string, string>();
 	    for (int i = 0; i < mods.Count; i++)
@@ -671,7 +671,7 @@ internal class ModManager
 
             if (modMetaData.Dependencies.Any())
 		    {
-			    var missingDeps = modMetaData.UnsatisfiedDependencies();
+			    var missingDeps = UnsatisfiedDependencies(modMetaData);
 			    if (missingDeps.Any())
                     warningBuilder.AppendLine("ModUnsatisfiedDependency".Translate(missingDeps.ToCommaList(useAnd: true)));
             }
@@ -684,18 +684,43 @@ internal class ModManager
 	    return result;
     }
 
-    private static List<string> FindConflicts(List<string> modsToCheck, Func<ModMetaData, bool>? predicate)
+    private List<string> FindConflicts(List<string> modsToCheck, Func<ModMetaData, bool>? predicate)
     {
         var list = new List<string>();
         foreach (var item in modsToCheck)
         {
-            ModMetaData activeModWithIdentifier = ModLister.GetActiveModWithIdentifier(item, ignorePostfix: true);
+            var activeModWithIdentifier = ActiveModDataNoPostfix(item);
             if (activeModWithIdentifier != null && (predicate == null || predicate(activeModWithIdentifier)))
             {
                 list.Add(activeModWithIdentifier.Name);
             }
         }
         return list;
+    }
+
+    private ModMetaData? ActiveModDataNoPostfix(string modId)
+    {
+        modId = modId.ToLowerInvariant();
+        foreach (var activeModData in active.Select(m => ModData(m)!))
+            if (activeModData.PackageIdNonUnique == modId)
+                return activeModData;
+
+        return null;
+    }
+
+    private List<string> UnsatisfiedDependencies(ModMetaData modData)
+    {
+        bool IsSatisfied(ModDependency dep)
+        {
+            return ActiveModDataNoPostfix(dep.packageId) != null ||
+                   dep.packageId.ToLowerInvariant() == "brrainz.harmony" &&
+                   ActiveModDataNoPostfix("zetrith.prepatcher") != null;
+        }
+
+        return modData.Dependencies
+            .Where(dep => !IsSatisfied(dep))
+            .Select(dep => dep.displayName)
+            .ToList();
     }
 
     private static void DrawContentSource(Rect r, ContentSource source, float size)
