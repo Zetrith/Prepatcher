@@ -1,15 +1,20 @@
 ﻿using System.Threading;
 using DataAssembly;
+using UnityEngine;
 using Verse;
 
 namespace Prepatcher;
 
 internal class PrepatcherMod : Mod
 {
+    public static Settings settings;
+
     public PrepatcherMod(ModContentPack content) : base(content)
     {
         Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
+
+        settings = GetSettings<Settings>();
 
         HarmonyPatches.PatchModLoading();
 
@@ -24,7 +29,7 @@ internal class PrepatcherMod : Mod
 
         Loader.PreLoad();
 
-        if (GenCommandLine.CommandLineArgPassed("noprestarter"))
+        if (GenCommandLine.CommandLineArgPassed("noprestarter") || settings.disablePrestarter)
             Loader.DoLoad();
 
         try
@@ -35,5 +40,15 @@ internal class PrepatcherMod : Mod
             // Thread abortion counts as a crash
             Prefs.data.resetModsConfigOnCrash = false;
         }
+    }
+
+    public override void DoSettingsWindowContents(Rect inRect)
+    {
+        settings.DoSettingsWindow(inRect);
+    }
+
+    public override string SettingsCategory()
+    {
+        return "Prepatcher";
     }
 }
