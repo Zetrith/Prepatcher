@@ -1,6 +1,8 @@
 # Prepatcher
 Structured assembly rewriting library/mod for RimWorld
 
+Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800
+
 The project has three main logical components:
 - **Assembly rewriter** - in principle platform-agnostic
 - **Assembly reloader** - specific to the Mono runtime used by RimWorld's Unity version
@@ -29,7 +31,19 @@ Add the [`Zetrith.Prepatcher`](https://www.nuget.org/packages/Zetrith.Prepatcher
 
 `<PackageReference Include="Zetrith.Prepatcher" Version="1.1.0" ExcludeAssets="runtime" />`
 
-Similar to Harmony, the package distributes an API (currently just attributes) and the actual runtime library is installed by the user once using the mod downloaded from here.
+Similar to Harmony, the package distributes an API to be used for compiling only and the actual runtime library is installed by the user once using the mod downloaded from here.
+
+To make a RimWorld mod correctly depend on Prepatcher, put this in `About.xml`:
+```xml
+<modDependencies>
+    <li>
+        <packageId>zetrith.prepatcher</packageId>
+        <displayName>Prepatcher</displayName>
+        <steamWorkshopUrl>steam://url/CommunityFilePage/2934420800</steamWorkshopUrl>
+        <downloadUrl>https://github.com/Zetrith/Prepatcher/releases/latest</downloadUrl>
+    </li>
+</modDependencies>
+```
 
 Library example (declaring field addition):
 ```cs
