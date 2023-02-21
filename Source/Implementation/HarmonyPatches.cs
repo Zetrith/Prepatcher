@@ -4,6 +4,7 @@ using System.Linq;
 using System.Reflection.Emit;
 using System.Threading;
 using HarmonyLib;
+using Prestarter;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -90,7 +91,10 @@ internal static class HarmonyPatches
             LongEventHandler.currentEvent = null;
 
             if (!Find.WindowStack.IsOpen(typeof(EditWindow_Log)))
+            {
                 Find.WindowStack.Add(new EditWindow_Log());
+                UIRoot_Prestarter.showManager = false;
+            }
 
             return false;
         }

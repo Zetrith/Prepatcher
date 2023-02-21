@@ -16,6 +16,8 @@ public class UIRoot_Prestarter : UIRoot
 {
     private ModManager manager = new();
 
+    public static bool showManager = true;
+
     public UIRoot_Prestarter()
     {
         KeyPrefs.KeyPrefsData.keyPrefs[KeyBindingDefOf.Accept] = new KeyBindingData(KeyCode.Return, KeyCode.None);
@@ -35,7 +37,7 @@ public class UIRoot_Prestarter : UIRoot
 
         ReorderableWidget.ReorderableWidgetOnGUI_BeforeWindowStack();
 
-        if (Find.WindowStack.windows.Count == 0)
+        if (showManager)
         {
             var managerRect = new Rect(UI.screenWidth / 2f - managerWidth / 2, UI.screenHeight / 2f - managerHeight / 2,
                 managerWidth, managerHeight);
