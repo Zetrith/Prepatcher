@@ -19,6 +19,9 @@ public class UIRoot_Prestarter : UIRoot
 
         ColoredText.ColonistCountRegex = new Regex("\\d+\\.?\\d* (colonist|colonists)");
         ColoredText.DateTimeRegexes = new List<Regex>();
+
+        // windows.Add(new DepWindow());
+        // showManager = false;
     }
 
     const float managerWidth = 800f;

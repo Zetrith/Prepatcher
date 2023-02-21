@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections;
+using System.Linq;
 using System.Reflection;
 using HarmonyLib;
 using Prepatcher.Process;
@@ -14,11 +15,12 @@ internal static class Loader
 {
     internal static Assembly origAsm;
     internal static Assembly newAsm;
-    internal static volatile bool doneLoading;
-    internal static volatile bool showLogConsole;
+    internal static volatile bool restartGame;
 
     internal static void Reload()
     {
+        PrepatcherMod.abortEvent.Set();
+
         try
         {
             Lg.Verbose("Reloading the game");
@@ -42,10 +44,11 @@ internal static class Loader
             using (StopwatchScope.Measure("Game processing"))
                 GameProcessing.Process();
 
+            // Only restart if no errors were logged
             if (!EditWindow_Log.wantsToOpen)
             {
                 Lg.Info("Done loading");
-                doneLoading = true;
+                restartGame = true;
             }
         }
         catch (Exception e)
@@ -53,15 +56,23 @@ internal static class Loader
             Lg.Error($"Exception while reloading: {e}");
         }
 
-        if (!doneLoading)
-        {
-            UnsafeAssembly.UnsetRefonlys();
-            showLogConsole = true;
-        }
+        if (!restartGame)
+            Find.Root.StartCoroutine(ShowLogConsole());
     }
 
-    internal static void MinimalInit()
+    private static IEnumerator ShowLogConsole()
     {
+        yield return null;
+
+        UnsafeAssembly.UnsetRefonlys();
+        LongEventHandler.currentEvent = null;
+        Find.WindowStack.Add(new EditWindow_Log { doCloseX = false });
+        UIRoot_Prestarter.showManager = false;
+    }
+
+    internal static IEnumerator MinimalInit()
+    {
+        yield return null;
         Lg.Verbose("Doing minimal init");
 
         HarmonyPatches.DoHarmonyPatchesForMinimalInit();
@@ -89,6 +100,8 @@ internal static class Loader
         Current.Root.uiRoot = new UIRoot_Prestarter();
 
         PrestarterInit.Init();
+
+        PrepatcherMod.abortEvent.Set();
     }
 
     private static void UnregisterWorkshopCallbacks()

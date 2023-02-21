@@ -12,6 +12,8 @@ internal class PrepatcherMod : Mod
     private const string CmdArgNoPrestarter = "noprestarter";
     private const string CmdArgVerbose = "verbose";
 
+    internal static ManualResetEvent abortEvent = new(false);
+
     public PrepatcherMod(ModContentPack content) : base(content)
     {
         InitLg();
@@ -28,13 +30,16 @@ internal class PrepatcherMod : Mod
         DataStore.startedOnce = true;
         Lg.Info("Starting...");
 
-        Loader.MinimalInit();
+        // Init on main thread
+        Find.Root.StartCoroutine(Loader.MinimalInit());
 
         if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) || settings.disablePrestarter)
             Loader.Reload();
 
         try
         {
+            abortEvent.WaitOne();
+
             Lg.Verbose("Aborting loading thread");
             Thread.CurrentThread.Abort();
         } catch (ThreadAbortException)

@@ -2,9 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection.Emit;
-using System.Threading;
 using HarmonyLib;
-using Prestarter;
 using RimWorld;
 using UnityEngine;
 using Verse;
@@ -47,6 +45,7 @@ internal static class HarmonyPatches
             new HarmonyMethod(typeof(HarmonyPatches), nameof(LogErrorPrefix))
         );
 
+        // Don't show "uninitialized DefOf" warnings in the console
         harmony.Patch(
             typeof(Log).GetMethod("Warning", new[] { typeof(string) }),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(LogWarningPrefix))
@@ -86,24 +85,8 @@ internal static class HarmonyPatches
 
     private static bool RootUpdatePrefix(Root __instance)
     {
-        if (Loader.showLogConsole)
-        {
-            LongEventHandler.currentEvent = null;
-
-            if (!Find.WindowStack.IsOpen(typeof(EditWindow_Log)))
-            {
-                Find.WindowStack.Add(new EditWindow_Log());
-                UIRoot_Prestarter.showManager = false;
-            }
-
+        if (!Loader.restartGame)
             return false;
-        }
-
-        if (!Loader.doneLoading)
-        {
-            Thread.Sleep(50);
-            return false;
-        }
 
         if (!runOnce)
         {
