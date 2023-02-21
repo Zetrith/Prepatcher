@@ -33,10 +33,10 @@ internal class TestBase
         set = new AssemblySet();
         fieldAdder = new FieldAdder(set);
 
-        targetAsm = set.AddAssembly("TestAssemblyTarget.dll");
+        targetAsm = set.AddAssembly("TestAssemblyTarget.dll", "TestAssemblyTarget.dll");
         targetAsm.ProcessAttributes = true;
 
-        testAsm = set.AddAssembly("TestAssembly.dll");
+        testAsm = set.AddAssembly("TestAssembly.dll", "TestAssembly.dll");
         testAsm.ProcessAttributes = true;
 
         var typeThingWithComps =

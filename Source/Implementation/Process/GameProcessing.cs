@@ -19,20 +19,22 @@ internal static class GameProcessing
         var set = new AssemblySet();
 
         // Add Assembly-CSharp
-        var asmCSharp = set.AddAssembly(typeof(Game).Assembly);
+        var asmCSharp = set.AddAssembly(AssemblyCSharp, typeof(Game).Assembly);
 
         // Add System and Unity assemblies
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
             if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
-                set.AddAssembly(asmPath).Modifiable = false;
+                set.AddAssembly($"(System) {Path.GetFileName(asmPath)}", asmPath).Modifiable = false;
 
         var modAsms = new List<Assembly>();
 
         // Add mod assemblies
-        foreach (var modAssembly in GetUniqueModAssemblies())
+        foreach (var (mod, modAssembly) in GetUniqueModAssemblies())
         {
-            if (set.FindModifiableAssembly(modAssembly.GetName().Name) != null) continue;
-            var masm = set.AddAssembly(modAssembly);
+            var name = modAssembly.GetName().Name;
+            if (set.FindModifiableAssembly(name) != null) continue;
+
+            var masm = set.AddAssembly($"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
             masm.ProcessAttributes = true;
             modAsms.Add(modAssembly);
         }
@@ -58,6 +60,8 @@ internal static class GameProcessing
 
     private static void LoadAssembly(ModifiableAssembly asm)
     {
+        Lg.Verbose($"Loading assembly: {asm}");
+
         var loadedAssembly = Assembly.Load(asm.Bytes);
         if (loadedAssembly.GetName().Name == AssemblyCSharp)
         {
@@ -75,6 +79,8 @@ internal static class GameProcessing
 
     private static void RegisterInjections(FieldAdder fieldAdder)
     {
+        Lg.Verbose("Registering injections");
+
         fieldAdder.RegisterInjection(
             typeof(ThingWithComps),
             typeof(ThingComp),
@@ -104,10 +110,10 @@ internal static class GameProcessing
         );
     }
 
-    private static IEnumerable<Assembly> GetUniqueModAssemblies()
+    private static IEnumerable<(ModContentPack, Assembly)> GetUniqueModAssemblies()
     {
         return LoadedModManager.RunningModsListForReading.SelectMany(
-            m => m.assemblies.loadedAssemblies
+            m => from a in m.assemblies.loadedAssemblies select (m, a)
         ).Distinct();
     }
 }

@@ -25,6 +25,9 @@ public class UIRoot_Prestarter : UIRoot
         ColoredText.DateTimeRegexes = new List<Regex>();
     }
 
+    const float managerWidth = 800f;
+    const float managerHeight = 700f;
+
     public override void UIRootOnGUI()
     {
         base.UIRootOnGUI();
@@ -32,12 +35,13 @@ public class UIRoot_Prestarter : UIRoot
 
         ReorderableWidget.ReorderableWidgetOnGUI_BeforeWindowStack();
 
-        const float managerWidth = 800f;
-        const float managerHeight = 700f;
-        var managerRect = new Rect(UI.screenWidth / 2f - managerWidth / 2, UI.screenHeight / 2f - managerHeight / 2,
-            managerWidth, managerHeight);
+        if (Find.WindowStack.windows.Count == 0)
+        {
+            var managerRect = new Rect(UI.screenWidth / 2f - managerWidth / 2, UI.screenHeight / 2f - managerHeight / 2,
+                managerWidth, managerHeight);
 
-        manager.Draw(managerRect);
+            manager.Draw(managerRect);
+        }
 
         windows.WindowStackOnGUI();
 

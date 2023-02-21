@@ -39,7 +39,8 @@ internal partial class FieldAdder
     {
         if (CheckFieldAccessor(accessor) is { } error)
         {
-            Lg.Error($"{error} for new field with accessor {accessor.MemberFullName()}");
+            var accessorAsm = set.FindModifiableAssembly(accessor.DeclaringType);
+            Lg.Error($"{accessorAsm}: {error} for new field with accessor {accessor.MemberFullName()}");
             return;
         }
 
@@ -61,7 +62,7 @@ internal partial class FieldAdder
         var targetType = FirstParameterTypeResolved(accessor)!;
         var fieldType = ImportFieldTypeIntoTargetModule(accessor);
 
-        Lg.Info($"Patching in a new field {FieldName(accessor)} of type {fieldType} in type {targetType}");
+        Lg.Verbose($"Adding new field {FieldName(accessor)} of type {fieldType} to type {targetType}");
 
         var ceField = new FieldDefinition(
             FieldName(accessor),
@@ -81,6 +82,8 @@ internal partial class FieldAdder
 
     private void PatchAccessor(MethodDefinition accessor, FieldDefinition newField)
     {
+        Lg.Verbose("Patching the accessor");
+
         accessor.ImplAttributes &= ~MethodImplAttributes.InternalCall; // Unextern
 
         var body = accessor.Body = new MethodBody(accessor);

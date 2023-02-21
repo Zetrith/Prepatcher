@@ -9,11 +9,12 @@ internal class PrepatcherMod : Mod
 {
     public static Settings settings;
 
+    private const string CmdArgNoPrestarter = "noprestarter";
+    private const string CmdArgVerbose = "verbose";
+
     public PrepatcherMod(ModContentPack content) : base(content)
     {
-        Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
-        Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
-
+        InitLg();
         settings = GetSettings<Settings>();
 
         HarmonyPatches.PatchModLoading();
@@ -27,19 +28,29 @@ internal class PrepatcherMod : Mod
         DataStore.startedOnce = true;
         Lg.Info("Starting...");
 
-        Loader.PreLoad();
+        Loader.MinimalInit();
 
-        if (GenCommandLine.CommandLineArgPassed("noprestarter") || settings.disablePrestarter)
-            Loader.DoLoad();
+        if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) || settings.disablePrestarter)
+            Loader.Reload();
 
         try
         {
+            Lg.Verbose("Aborting loading thread");
             Thread.CurrentThread.Abort();
         } catch (ThreadAbortException)
         {
             // Thread abortion counts as a crash
             Prefs.data.resetModsConfigOnCrash = false;
         }
+    }
+
+    private static void InitLg()
+    {
+        Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
+        Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
+
+        if (GenCommandLine.CommandLineArgPassed(CmdArgVerbose))
+            Lg.VerboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
     }
 
     public override void DoSettingsWindowContents(Rect inRect)

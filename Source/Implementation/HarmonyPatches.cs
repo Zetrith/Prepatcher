@@ -17,6 +17,8 @@ internal static class HarmonyPatches
 
     internal static void PatchModLoading()
     {
+        Lg.Verbose("Patching mod loading");
+
         // If a mod needs to loadAfter brrainz.harmony, then also loadAfter zetrith.prepatcher
         harmony.Patch(
             typeof(ModMetaData.ModMetaDataInternal).GetMethod("InitVersionedData"),
@@ -36,22 +38,29 @@ internal static class HarmonyPatches
 
     internal static void DoHarmonyPatchesForMinimalInit()
     {
+        Lg.Verbose("Patching for minimal init");
+
         // Don't print thread abortion errors to log
         harmony.Patch(
             typeof(Log).GetMethod("Error", new[] { typeof(string) }),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(LogErrorPrefix))
         );
 
+        harmony.Patch(
+            typeof(Log).GetMethod("Warning", new[] { typeof(string) }),
+            new HarmonyMethod(typeof(HarmonyPatches), nameof(LogWarningPrefix))
+        );
+
         // Cancel MusicManagerEntryUpdate because it requires SongDefOf.EntrySong != null
         harmony.Patch(
-            typeof(MusicManagerEntry).GetMethod("MusicManagerEntryUpdate"),
+            typeof(MusicManagerEntry).GetMethod(nameof(MusicManagerEntry.MusicManagerEntryUpdate)),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(Cancel))
         );
     }
 
     internal static void PatchRootMethods()
     {
-        Lg.Info("Patching Start");
+        Lg.Verbose("Patching Root methods");
 
         harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Play").GetMethod("Start"),
@@ -62,13 +71,6 @@ internal static class HarmonyPatches
             Loader.origAsm.GetType("Verse.Root_Entry").GetMethod("Start"),
             transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(EmptyTranspiler))
         );
-
-        harmony.Patch(
-            Loader.origAsm.GetType("Verse.Root").GetMethod("OnGUI"),
-            new HarmonyMethod(typeof(HarmonyPatches), nameof(RootOnGUIPrefix))
-        );
-
-        Lg.Info("Patching Update");
 
         harmony.Patch(
             Loader.origAsm.GetType("Verse.Root_Play").GetMethod("Update"),
@@ -83,8 +85,21 @@ internal static class HarmonyPatches
 
     private static bool RootUpdatePrefix(Root __instance)
     {
-        while (!Loader.doneLoading)
+        if (Loader.showLogConsole)
+        {
+            LongEventHandler.currentEvent = null;
+
+            if (!Find.WindowStack.IsOpen(typeof(EditWindow_Log)))
+                Find.WindowStack.Add(new EditWindow_Log());
+
+            return false;
+        }
+
+        if (!Loader.doneLoading)
+        {
             Thread.Sleep(50);
+            return false;
+        }
 
         if (!runOnce)
         {
@@ -134,11 +149,6 @@ internal static class HarmonyPatches
         yield return new CodeInstruction(OpCodes.Ret);
     }
 
-    private static bool RootOnGUIPrefix()
-    {
-        return true;
-    }
-
     private static bool Cancel()
     {
         return false;
@@ -147,6 +157,14 @@ internal static class HarmonyPatches
     private static bool LogErrorPrefix(string text)
     {
         return !text.Contains("ThreadAbortException");
+    }
+
+    private static bool LogWarningPrefix(string text)
+    {
+        if (!text.Contains("Tried to use an uninitialized DefOf"))
+            return true;
+        Debug.LogWarning(text);
+        return false;
     }
 
     private static void InitVersionedDataPostfix(ModMetaData.ModMetaDataInternal __instance)

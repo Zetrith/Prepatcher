@@ -15,40 +15,57 @@ internal static class Loader
     internal static Assembly origAsm;
     internal static Assembly newAsm;
     internal static volatile bool doneLoading;
+    internal static volatile bool showLogConsole;
 
-    internal static void PreLoad()
+    internal static void Reload()
     {
-        HarmonyPatches.DoHarmonyPatchesForMinimalInit();
-        MinimalInit();
-        PrestarterInit.Init();
-    }
-
-    internal static void DoLoad()
-    {
-        origAsm = typeof(Game).Assembly;
-
-        // Reinit after potential mod list changes from Prestarter
-        using (StopwatchScope.Measure("Reinit mods"))
+        try
         {
+            Lg.Verbose("Reloading the game");
+
+            origAsm = typeof(Game).Assembly;
+
+            Lg.Verbose("Reloading active mods");
+
+            // Reinit after potential mod list changes from Prestarter
             LoadedModManager.runningMods.Clear();
             LoadedModManager.InitializeMods();
             foreach (var mod in LoadedModManager.RunningModsListForReading)
                 mod.assemblies.ReloadAll();
+
+            Lg.Verbose("Patching and clearing");
+
+            HarmonyPatches.PatchRootMethods();
+            UnregisterWorkshopCallbacks();
+            ClearAssemblyResolve();
+
+            using (StopwatchScope.Measure("Game processing"))
+                GameProcessing.Process();
+
+            if (!EditWindow_Log.wantsToOpen)
+            {
+                Lg.Info("Done loading");
+                doneLoading = true;
+            }
+        }
+        catch (Exception e)
+        {
+            Lg.Error($"Exception while reloading: {e}");
         }
 
-        HarmonyPatches.PatchRootMethods();
-        UnregisterWorkshopCallbacks();
-        ClearAssemblyResolve();
-
-        using (StopwatchScope.Measure("Game processing"))
-            GameProcessing.Process();
-
-        Lg.Info("Done loading");
-        doneLoading = true;
+        if (!doneLoading)
+        {
+            UnsafeAssembly.UnsetRefonlys();
+            showLogConsole = true;
+        }
     }
 
-    private static void MinimalInit()
+    internal static void MinimalInit()
     {
+        Lg.Verbose("Doing minimal init");
+
+        HarmonyPatches.DoHarmonyPatchesForMinimalInit();
+
         // LongEventHandler wants to show tips after uiRoot != null but none are loaded
         LongEventHandler.currentEvent.showExtraUIInfo = false;
 
@@ -65,9 +82,13 @@ internal static class Loader
 
         Current.Root.soundRoot = new SoundRoot(); // Root.Update requires soundRoot
 
+        Lg.Verbose("Setting Prestarter UI root");
+
         // Start Prestarter
-        PrestarterInit.DoLoad = DoLoad;
+        PrestarterInit.DoLoad = Reload;
         Current.Root.uiRoot = new UIRoot_Prestarter();
+
+        PrestarterInit.Init();
     }
 
     private static void UnregisterWorkshopCallbacks()

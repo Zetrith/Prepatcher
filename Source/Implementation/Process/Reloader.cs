@@ -10,7 +10,7 @@ internal static class Reloader
         PropagateNeedsReload(set);
 
         // Writing and loading is split to do as little as possible after refonlys are set
-        Lg.Info("Writing new assemblies");
+        Lg.Info("Writing patched assemblies");
         using (StopwatchScope.Measure("Writing"))
             foreach (var toReload in set.AllAssemblies.Where(modAssembly => modAssembly.NeedsReload))
                 toReload.PrepareByteArray();
@@ -19,7 +19,7 @@ internal static class Reloader
         foreach (var toReload in set.AllAssemblies.Where(modAssembly => modAssembly.NeedsReload))
             toReload.SetSourceRefOnly();
 
-        Lg.Info("Loading new assemblies");
+        Lg.Info("Loading patched assemblies");
         foreach (var toReload in set.AllAssemblies.Where(modAssembly => modAssembly.NeedsReload))
             loadAssemblyAction(toReload);
     }

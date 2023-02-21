@@ -1,4 +1,6 @@
-﻿using System.Reflection;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using HarmonyLib;
 
@@ -7,6 +9,8 @@ namespace Prepatcher;
 internal class UnsafeAssembly
 {
     private static readonly FieldInfo? MonoAssemblyField = AccessTools.Field(typeof(Assembly), "_mono_assembly");
+
+    private static List<Assembly> refOnly = new();
 
     // Loading two assemblies with the same name and version isn't possible with Unity's Mono.
     // It IS possible in .Net and has been fixed in more recent versions of Mono
@@ -17,8 +21,22 @@ internal class UnsafeAssembly
     // That allows for the duplication to happen.
     internal static unsafe void SetReflectionOnly(Assembly asm, bool value)
     {
-        if (MonoAssemblyField != null)
-            *(int*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
+        if (MonoAssemblyField == null)
+            throw new Exception("Not available on non-Mono runtime");
+
+        if (asm == null)
+            throw new NullReferenceException("Settings refonly on a null assembly");
+
+        *(int*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x74) = value ? 1 : 0;
+        if (value)
+            refOnly.Add(asm);
+    }
+
+    // Used for error recovery
+    internal static void UnsetRefonlys()
+    {
+        foreach (var asm in refOnly.ToList())
+            SetReflectionOnly(asm, false);
     }
 
     internal static unsafe byte[] GetRawData(Assembly asm)

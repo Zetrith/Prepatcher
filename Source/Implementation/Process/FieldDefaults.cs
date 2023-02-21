@@ -11,6 +11,8 @@ internal partial class FieldAdder
 {
     private void PatchCtorsWithDefault(FieldDefinition newField, CustomAttribute attribute)
     {
+        Lg.Verbose("Patching the ctor with field constant default");
+
         var obj = attribute.ConstructorArguments.First().Value;
         var defaultValue = obj is CustomAttributeArgument arg ? arg.Value : obj;
 
@@ -33,6 +35,8 @@ internal partial class FieldAdder
 
     private void PatchCtorsWithInitializer(MethodDefinition accessor, FieldDefinition newField, CustomAttribute attribute)
     {
+        Lg.Verbose("Patching the ctor with field initializer");
+
         var initializer = accessor.DeclaringType.FindMethod((string)attribute.ConstructorArguments.First().Value);
 
         ReplaceRetsInCtors(newField.DeclaringType, new []

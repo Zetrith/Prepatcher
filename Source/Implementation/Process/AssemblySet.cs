@@ -18,17 +18,19 @@ public class AssemblySet
         Resolver = new AssemblyResolver(this);
     }
 
-    internal ModifiableAssembly AddAssembly(Assembly asm)
+    internal ModifiableAssembly AddAssembly(string friendlyName, Assembly asm)
     {
-        var masm = new ModifiableAssembly(asm, Resolver);
+        Lg.Verbose($"Adding assembly {friendlyName}");
+        var masm = new ModifiableAssembly(friendlyName, asm, Resolver);
         nameToAsm[masm.AsmDefinition.ShortName()] = masm;
         AllAssemblies.Add(masm);
         return masm;
     }
 
-    internal ModifiableAssembly AddAssembly(string asmFilePath)
+    internal ModifiableAssembly AddAssembly(string friendlyName, string asmFilePath)
     {
-        var masm = new ModifiableAssembly(asmFilePath, Resolver);
+        Lg.Verbose($"Adding assembly {friendlyName}");
+        var masm = new ModifiableAssembly(friendlyName, asmFilePath, Resolver);
         nameToAsm[masm.AsmDefinition.ShortName()] = masm;
         AllAssemblies.Add(masm);
         return masm;
