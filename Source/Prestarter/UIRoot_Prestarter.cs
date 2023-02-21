@@ -1,14 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
+﻿using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using RimWorld;
-using Unity.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 using Verse;
-using UnityEngine.Yoga;
 
 namespace Prestarter;
 

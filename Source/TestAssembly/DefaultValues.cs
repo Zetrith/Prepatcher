@@ -1,5 +1,4 @@
-﻿using System.Runtime.Remoting.Messaging;
-using Prepatcher;
+﻿using Prepatcher;
 using TestAssemblyTarget;
 
 namespace Tests;

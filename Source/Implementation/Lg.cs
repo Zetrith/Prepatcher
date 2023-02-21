@@ -1,6 +1,4 @@
-﻿using Verse;
-
-namespace Prepatcher;
+﻿namespace Prepatcher;
 
 internal static class Lg
 {
