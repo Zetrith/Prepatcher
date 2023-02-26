@@ -1,4 +1,6 @@
 # Prepatcher
+![Latest API version](https://img.shields.io/nuget/v/Zetrith.Prepatcher?label=Zetrith.Prepatcher)
+
 Structured assembly rewriting library/mod for RimWorld
 
 Workshop: https://steamcommunity.com/sharedfiles/filedetails/?id=2934420800
@@ -29,7 +31,7 @@ Having both Prepatcher and the Harmony mod active won't cause any problems.
 
 Add the [`Zetrith.Prepatcher`](https://www.nuget.org/packages/Zetrith.Prepatcher) nuget package to your mod's project:
 
-`<PackageReference Include="Zetrith.Prepatcher" Version="1.1.0" ExcludeAssets="runtime" />`
+`<PackageReference Include="Zetrith.Prepatcher" Version="<version>" />`
 
 Similar to Harmony, the package distributes an API to be used for compiling only and the actual runtime library is installed by the user once using the mod downloaded from here.
 
