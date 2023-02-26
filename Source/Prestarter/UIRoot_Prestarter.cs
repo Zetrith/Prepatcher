@@ -8,7 +8,7 @@ namespace Prestarter;
 
 public class UIRoot_Prestarter : UIRoot
 {
-    private ModManager manager = new();
+    private ModManager manager;
 
     public static bool showManager = true;
 
@@ -19,6 +19,8 @@ public class UIRoot_Prestarter : UIRoot
 
         ColoredText.ColonistCountRegex = new Regex("\\d+\\.?\\d* (colonist|colonists)");
         ColoredText.DateTimeRegexes = new List<Regex>();
+
+        manager = new ModManager();
 
         // windows.Add(new DepWindow());
         // showManager = false;

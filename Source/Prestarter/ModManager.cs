@@ -13,8 +13,8 @@ namespace Prestarter;
 [HotSwappable]
 internal class ModManager
 {
-    private List<string> inactive = new();
-    private List<string> active; // Mod ids with postfixes
+    private UniqueList<string> inactive;
+    private UniqueList<string> active; // Mod ids with postfixes
 
     private List<string> filteredInactive;
     private List<string> filteredActive;
@@ -44,7 +44,7 @@ internal class ModManager
             : emptyList;
 
     private int? undoneIndex;
-    private List<List<string>> undoStack = new();
+    private List<UniqueList<string>> undoStack = new();
 
     private static bool ShiftIsHeld => Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
     private static bool ControlIsHeld => Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.RightControl);
@@ -63,7 +63,7 @@ internal class ModManager
 
     internal ModManager()
     {
-        active = ModsConfig.ActiveModsInLoadOrder.Select(m => m.PackageId).ToList();
+        active = new UniqueList<string>(ModsConfig.ActiveModsInLoadOrder.Select(m => m.PackageId));
         RecacheLists();
     }
 
@@ -72,10 +72,10 @@ internal class ModManager
         ClearSelection();
 
         inactive =
-            (from mod in ModLister.AllInstalledMods
+            new UniqueList<string>(from mod in ModLister.AllInstalledMods
                 where !active.Contains(mod.PackageId)
                 orderby mod.Official descending, mod.ShortName
-                select mod.PackageId).ToList();
+                select mod.PackageId);
 
         filteredInactive = inactive.Where(m => m.Contains(inactiveFilter)).ToList();
         filteredActive = active.Where(m => m.Contains(activeFilter)).ToList();
@@ -517,7 +517,7 @@ internal class ModManager
             undoneIndex = null;
         }
 
-        undoStack.Add(new List<string>(active));
+        undoStack.Add(new UniqueList<string>(active));
     }
 
     private void SortSelected()
@@ -568,7 +568,7 @@ internal class ModManager
     {
         LongEventHandler.QueueLongEvent(() =>
         {
-            ModsConfig.SetActiveToList(active);
+            ModsConfig.SetActiveToList(active.ToList());
             ModsConfig.Save();
             PrestarterInit.DoLoad();
         }, "", true, null, false);
@@ -635,7 +635,8 @@ internal class ModManager
         var newActive = new List<string>();
         foreach (int newIndex in directedAcyclicGraph.TopologicalSort())
             newActive.Add(active[newIndex]);
-        active = newActive;
+
+        active = new UniqueList<string>(newActive);
 
         RecacheLists();
     }
