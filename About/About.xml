@@ -9,5 +9,7 @@
   <url>https://github.com/Zetrith/Prepatcher</url>
   <loadBefore>
 	<li>Ludeon.RimWorld</li>
+	<li>brrainz.harmony</li>
   </loadBefore>
+  <description>Includes Harmony v2.2.2 and PrepatcherAPI v1.1.1</description>
 </ModMetaData>

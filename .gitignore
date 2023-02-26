@@ -352,3 +352,7 @@ MigrationBackup/
 .ionide/
 
 .idea/
+
+Assemblies/
+Prepatcher/
+Prepatcher*.zip
