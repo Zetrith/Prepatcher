@@ -37,11 +37,15 @@ public abstract class BaseComp
     public BaseWithComps parent;
 }
 
-public class SomeComp : BaseComp
+public class OtherComp : BaseComp
 {
 }
 
-public class BaseWithComps
+public class BaseClass
+{
+}
+
+public class BaseWithComps : BaseClass
 {
     public List<BaseComp> comps = new();
     public Type[] compTypes;

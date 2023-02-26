@@ -7,9 +7,6 @@ namespace Tests;
 public static class BadFields
 {
     [PrepatcherField]
-    private static ref int FailExtern(TargetClass target) => throw new Exception();
-
-    [PrepatcherField]
     private static extern ref T FailGenericMethod<T>(TargetClass target);
 
     [PrepatcherField]

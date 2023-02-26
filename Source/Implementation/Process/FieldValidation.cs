@@ -8,9 +8,6 @@ internal partial class FieldAdder
 {
     private string? CheckFieldAccessor(MethodDefinition accessor)
     {
-        if (accessor.HasBody && accessor.Body.Instructions.Count() != 0)
-            return "Accessor is not extern";
-
         if (accessor.Parameters.Count() != 1)
             return "Accessor must have exactly one parameter";
 
@@ -38,7 +35,7 @@ internal partial class FieldAdder
 
         return null;
     }
-    
+
     private static IEnumerable<TypeReference> GenericArgumentsOf(TypeReference t)
     {
         return t is GenericInstanceType gType ? gType.GenericArguments : Enumerable.Empty<TypeReference>();

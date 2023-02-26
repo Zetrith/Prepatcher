@@ -6,8 +6,28 @@ namespace Tests;
 public static class DefaultValues
 {
     [PrepatcherField]
-    [DefaultValue(1)]
-    public static extern ref int MyIntDefault(this TargetClass target);
+    [DefaultValue(int.MinValue)]
+    public static extern ref int MyIntDefaultMin(this TargetClass target);
+
+    [PrepatcherField]
+    [DefaultValue(int.MaxValue)]
+    public static extern ref int MyIntDefaultMax(this TargetClass target);
+
+    [PrepatcherField]
+    [DefaultValue(null)]
+    public static extern ref int MyIntDefaultNull(this TargetClass target);
+
+    [PrepatcherField]
+    [DefaultValue(uint.MinValue)]
+    public static extern ref uint MyUIntDefaultMin(this TargetClass target);
+
+    [PrepatcherField]
+    [DefaultValue(uint.MaxValue)]
+    public static extern ref uint MyUIntDefaultMax(this TargetClass target);
+
+    [PrepatcherField]
+    [DefaultValue(null)]
+    public static extern ref string MyStringDefaultNull(this TargetClass target);
 
     [PrepatcherField]
     [DefaultValue("a")]

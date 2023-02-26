@@ -6,7 +6,7 @@
 [AttributeUsage(AttributeTargets.Method)]
 public class DefaultValueAttribute : Attribute
 {
-    public DefaultValueAttribute(object defaultValue)
+    public DefaultValueAttribute(object? defaultValue)
     {
     }
 }

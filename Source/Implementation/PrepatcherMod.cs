@@ -30,11 +30,17 @@ internal class PrepatcherMod : Mod
         DataStore.startedOnce = true;
         Lg.Info("Starting...");
 
-        // Init on main thread
-        Find.Root.StartCoroutine(Loader.MinimalInit());
+        HarmonyPatches.SilenceLogging();
 
         if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) || settings.disablePrestarter)
+        {
             Loader.Reload();
+        }
+        else
+        {
+            // Init on main thread
+            Find.Root.StartCoroutine(Loader.MinimalInit());
+        }
 
         try
         {

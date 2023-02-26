@@ -23,7 +23,10 @@ internal static class GameProcessing
         // Add System and Unity assemblies
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
             if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
-                set.AddAssembly($"(System) {Path.GetFileName(asmPath)}", asmPath).Modifiable = false;
+            {
+                var systemAsm = set.AddAssembly($"(System) {Path.GetFileName(asmPath)}", asmPath);
+                systemAsm.Modifiable = false;
+            }
 
         var modAsms = new List<Assembly>();
 
@@ -34,6 +37,7 @@ internal static class GameProcessing
             if (set.FindModifiableAssembly(name) != null) continue;
 
             var masm = set.AddAssembly($"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
+
             masm.ProcessAttributes = true;
             modAsms.Add(modAssembly);
         }
@@ -68,7 +72,7 @@ internal static class GameProcessing
             AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
         }
 
-        if (GenCommandLine.TryGetCommandLineArg("dumpasms", out var path))
+        if (GenCommandLine.TryGetCommandLineArg("dumpasms", out var path) && !path.Trim().NullOrEmpty())
         {
             Directory.CreateDirectory(path);
             if (asm.Modified)

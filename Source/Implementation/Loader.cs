@@ -16,6 +16,7 @@ internal static class Loader
     internal static Assembly origAsm;
     internal static Assembly newAsm;
     internal static volatile bool restartGame;
+    internal static bool minimalInited;
 
     internal static void Reload()
     {
@@ -57,14 +58,17 @@ internal static class Loader
         }
 
         if (!restartGame)
+        {
+            UnsafeAssembly.UnsetRefonlys();
+            Find.Root.StartCoroutine(MinimalInit());
             Find.Root.StartCoroutine(ShowLogConsole());
+        }
     }
 
     private static IEnumerator ShowLogConsole()
     {
         yield return null;
 
-        UnsafeAssembly.UnsetRefonlys();
         LongEventHandler.currentEvent = null;
         Find.WindowStack.Add(new EditWindow_Log { doCloseX = false });
         UIRoot_Prestarter.showManager = false;
@@ -73,6 +77,12 @@ internal static class Loader
     internal static IEnumerator MinimalInit()
     {
         yield return null;
+
+        if (minimalInited)
+            yield break;
+
+        minimalInited = true;
+
         Lg.Verbose("Doing minimal init");
 
         HarmonyPatches.DoHarmonyPatchesForMinimalInit();
@@ -106,6 +116,8 @@ internal static class Loader
 
     private static void UnregisterWorkshopCallbacks()
     {
+        Lg.Verbose("Unregistering workshop callbacks");
+
         // These hold references to old code and would get called externally by Steam
         Workshop.subscribedCallback?.Unregister();
         Workshop.unsubscribedCallback?.Unregister();
@@ -114,6 +126,8 @@ internal static class Loader
 
     private static void ClearAssemblyResolve()
     {
+        Lg.Verbose("Clearing AppDomain.AssemblyResolve");
+
         var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
         var del = (Delegate)asmResolve.GetValue(AppDomain.CurrentDomain);
 

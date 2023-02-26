@@ -39,6 +39,7 @@ internal class TestPatches : TestBase
         Injections.TestCompBaseInjection().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
         Injections.TestCompInjectionOnSubType().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
         Injections.TestCompBaseInjectionOnSubType().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
+        Injections.TestCompInjectionOnSuperType().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
     }
 
     [Test]
@@ -46,8 +47,13 @@ internal class TestPatches : TestBase
     {
         var targetObj = new TargetClass();
 
-        Assert.That(targetObj.MyIntDefault(), Is.EqualTo(1));
+        Assert.That(targetObj.MyIntDefaultMin(), Is.EqualTo(int.MinValue));
+        Assert.That(targetObj.MyIntDefaultMax(), Is.EqualTo(int.MaxValue));
+        Assert.That(targetObj.MyIntDefaultNull(), Is.EqualTo(0));
+        Assert.That(targetObj.MyUIntDefaultMin(), Is.EqualTo(uint.MinValue));
+        Assert.That(targetObj.MyUIntDefaultMax(), Is.EqualTo(uint.MaxValue));
         Assert.That(targetObj.MyStringDefault(), Is.EqualTo("a"));
+        Assert.That(targetObj.MyStringDefaultNull(), Is.EqualTo(null));
     }
 
     [Test]

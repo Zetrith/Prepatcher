@@ -21,8 +21,9 @@ internal class UnsafeAssembly
     // That allows for the duplication to happen.
     internal static unsafe void SetReflectionOnly(Assembly asm, bool value)
     {
+        // Silently skip on non-Mono runtimes
         if (MonoAssemblyField == null)
-            throw new Exception("Not available on non-Mono runtime");
+            return;
 
         if (asm == null)
             throw new NullReferenceException("Settings refonly on a null assembly");

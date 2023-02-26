@@ -7,7 +7,7 @@ namespace Prepatcher.Process;
 public class ModifiableAssembly
 {
     public string FriendlyName { get; }
-    private Assembly? SourceAssembly { get; }
+    public Assembly? SourceAssembly { get; set; }
     public AssemblyDefinition AsmDefinition { get; }
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
     public bool NeedsReload { get; set; }
@@ -37,8 +37,9 @@ public class ModifiableAssembly
         );
     }
 
-    public void PrepareByteArray()
+    public void SerializeToByteArray()
     {
+        Lg.Verbose($"Serializing: {FriendlyName}");
         var stream = new MemoryStream();
         AsmDefinition.Write(stream);
         Bytes = stream.ToArray();

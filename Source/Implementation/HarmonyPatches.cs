@@ -35,10 +35,8 @@ internal static class HarmonyPatches
             InitVersionedDataPostfix(modMeta);
     }
 
-    internal static void DoHarmonyPatchesForMinimalInit()
+    internal static void SilenceLogging()
     {
-        Lg.Verbose("Patching for minimal init");
-
         // Don't print thread abortion errors to log
         harmony.Patch(
             typeof(Log).GetMethod("Error", new[] { typeof(string) }),
@@ -50,7 +48,10 @@ internal static class HarmonyPatches
             typeof(Log).GetMethod("Warning", new[] { typeof(string) }),
             new HarmonyMethod(typeof(HarmonyPatches), nameof(LogWarningPrefix))
         );
+    }
 
+    internal static void DoHarmonyPatchesForMinimalInit()
+    {
         // Cancel MusicManagerEntryUpdate because it requires SongDefOf.EntrySong != null
         harmony.Patch(
             typeof(MusicManagerEntry).GetMethod(nameof(MusicManagerEntry.MusicManagerEntryUpdate)),

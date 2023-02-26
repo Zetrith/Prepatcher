@@ -31,7 +31,7 @@ internal partial class FieldAdder
         if (listField == null)
             throw new Exception($"Component list field {targetType}:{listFieldName} not found");
 
-        if (method!.Body.Instructions.Last().OpCode != OpCodes.Ret)
+        if (method.Body.Instructions.Last().OpCode != OpCodes.Ret)
             throw new Exception($"Expected last instruction of injection site {targetType}:{initMethod} to be Ret");
 
         injectionSites[(targetType, compType)] = (
@@ -68,12 +68,27 @@ internal partial class FieldAdder
         body.Instructions.Add(retInst);
     }
 
+    // Find the unique (component owner type, component type) pair for this accessor and then
+    // return the corresponding injection site
     private (MethodDefinition, FieldDefinition)? GetInjectionSite(MethodDefinition accessor)
     {
+        var fieldTarget = FirstParameterTypeResolved(accessor)!;
+
+        // (field target or its base, field type or its base)
         var possibleTypes =
-            from targetType in FirstParameterTypeResolved(accessor)!.BaseTypesAndSelfResolved()
+            from targetType in fieldTarget.BaseTypesAndSelfResolved()
             from fieldType in FieldType(accessor).Resolve().BaseTypesAndSelfResolved()
             select (targetType, fieldType);
+
+        // (supertype of field target, field type or its base)
+        possibleTypes = possibleTypes.Concat(
+            from targetType in
+                injectionSites.Keys
+                .Select(p => p.targetType)
+                .Where(t => t != fieldTarget && t.BaseTypesAndSelfResolved().Contains(fieldTarget))
+            from fieldType in FieldType(accessor).Resolve().BaseTypesAndSelfResolved()
+            select (targetType, fieldType)
+        );
 
         // SingleOrDefault is used to throw on ambiguity
         var siteId = possibleTypes.SingleOrDefault(p => injectionSites.ContainsKey(p));

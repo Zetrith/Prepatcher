@@ -9,11 +9,11 @@ internal static class Reloader
     {
         PropagateNeedsReload(set);
 
-        // Writing and loading is split to do as little as possible after refonlys are set
-        Lg.Info("Writing patched assemblies");
-        using (StopwatchScope.Measure("Writing"))
+        // Serializing and loading is split to do as little as possible after refonlys are set
+        Lg.Info("Serializing patched assemblies");
+        using (StopwatchScope.Measure("Serializing"))
             foreach (var toReload in set.AllAssemblies.Where(modAssembly => modAssembly.NeedsReload))
-                toReload.PrepareByteArray();
+                toReload.SerializeToByteArray();
 
         Lg.Info("Setting refonly");
         foreach (var toReload in set.AllAssemblies.Where(modAssembly => modAssembly.NeedsReload))
