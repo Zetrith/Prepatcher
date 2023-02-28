@@ -6,10 +6,6 @@ namespace BrokenDependency
     {
     }
 
-    public class MissingAttribute : Attribute
-    {
-    }
-
     public enum MissingEnum
     {
         Missing
