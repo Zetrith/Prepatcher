@@ -11,7 +11,6 @@ namespace Prepatcher.Process;
 internal static class GameProcessing
 {
     private const string AssemblyCSharp = "Assembly-CSharp";
-    private const string AssemblyCSharpFile = "Assembly-CSharp.dll";
 
     internal static void Process()
     {
@@ -22,11 +21,14 @@ internal static class GameProcessing
 
         // Add System and Unity assemblies
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
-            if (Path.GetFileName(asmPath) != AssemblyCSharpFile)
+        {
+            var name = AssemblyName.GetAssemblyName(asmPath);
+            if (name.Name != AssemblyCSharp)
             {
                 var systemAsm = set.AddAssembly($"(System) {Path.GetFileName(asmPath)}", asmPath);
                 systemAsm.Modifiable = false;
             }
+        }
 
         var modAsms = new List<Assembly>();
 

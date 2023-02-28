@@ -52,6 +52,8 @@ public class BaseWithComps : BaseClass
 
     public void InitComps()
     {
+        comps.Clear();
+
         foreach (var type in compTypes)
         {
             var comp = (BaseComp)Activator.CreateInstance(type);

@@ -30,7 +30,7 @@ public static class Injections
     private static extern MyComponent MyCompBaseOnSuperType(this BaseClass target);
 
     // Exact comp type, initializer type == target type
-    public static BaseComp TestSomeCompInjection()
+    public static BaseComp TestOtherCompInjection()
     {
         var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(OtherComp) } };
         thing.InitComps();
@@ -41,6 +41,15 @@ public static class Injections
     public static BaseComp TestCompInjection()
     {
         var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(OtherComp) } };
+        thing.InitComps();
+        return thing.MyComp();
+    }
+
+    // Exact comp type, initializer type == target type
+    public static BaseComp TestCompInjection_DoubleInit()
+    {
+        var thing = new BaseWithComps { compTypes = new[] { typeof(DerivedMyComponent), typeof(OtherComp) } };
+        thing.InitComps();
         thing.InitComps();
         return thing.MyComp();
     }

@@ -5,17 +5,21 @@ namespace Prepatcher.Process;
 
 public static class InjectionHelper
 {
-    public static void TryInject(RuntimeFieldHandle fieldHandle, object target, IEnumerable<object> comps)
+    public static void Clear<T, TF>(ref TF? field, object target)
     {
-        var field = FieldInfo.GetFieldFromHandle(fieldHandle);
+        if (target is not T) return;
+        field = default;
+    }
 
-        if (!field.DeclaringType!.IsInstanceOfType(target)) return;
-        if (field.GetValue(target) != null) return;
+    public static void TryInject<T, TF>(ref TF field, object target, IEnumerable<object> comps)
+    {
+        if (target is not T) return;
+        if (field != null) return;
 
         foreach (var comp in comps)
-            if (field.FieldType.IsInstanceOfType(comp))
+            if (comp is TF casted)
             {
-                field.SetValue(target, comp);
+                field = casted;
                 break;
             }
     }

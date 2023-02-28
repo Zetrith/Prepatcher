@@ -53,16 +53,36 @@ internal partial class FieldAdder
         var (initMethod, listField) = GetInjectionSite(accessor)!.Value;
 
         var body = initMethod.Body;
+
+        // Set to null in the prefix
+        body.Instructions.Insert(0, Instruction.Create(OpCodes.Ldarg_0));
+        body.Instructions.Insert(1, Instruction.Create(OpCodes.Ldflda, newField));
+        body.Instructions.Insert(2, Instruction.Create(OpCodes.Ldarg_0));
+        body.Instructions.Insert(3, Instruction.Create(
+            OpCodes.Call,
+            new GenericInstanceMethod(initMethod.Module.ImportReference(
+                AccessTools.Method(typeof(InjectionHelper), nameof(InjectionHelper.Clear))))
+            {
+                GenericArguments = { newField.DeclaringType, newField.FieldType }
+            }
+        ));
+
         var retInst = body.Instructions.Last();
         body.Instructions.Remove(retInst);
 
-        body.GetILProcessor().Emit(OpCodes.Ldtoken, newField);
+        // Inject in the postfix
+        body.GetILProcessor().Emit(OpCodes.Ldarg_0);
+        body.GetILProcessor().Emit(OpCodes.Ldflda, newField);
         body.GetILProcessor().Emit(OpCodes.Ldarg_0);
         body.GetILProcessor().Emit(OpCodes.Ldarg_0);
         body.GetILProcessor().Emit(OpCodes.Ldfld, listField);
         body.GetILProcessor().Emit(
             OpCodes.Call,
-            initMethod.Module.ImportReference(AccessTools.Method(typeof(InjectionHelper), nameof(InjectionHelper.TryInject)))
+            new GenericInstanceMethod(initMethod.Module.ImportReference(
+                AccessTools.Method(typeof(InjectionHelper), nameof(InjectionHelper.TryInject))))
+            {
+                GenericArguments = { newField.DeclaringType, newField.FieldType }
+            }
         );
 
         body.Instructions.Add(retInst);

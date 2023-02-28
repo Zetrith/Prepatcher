@@ -1,13 +1,15 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using HarmonyLib;
+using Verse;
 
 namespace Prepatcher.Process;
 
 internal static class FreePatcher
 {
-    internal static void RunPatches(IEnumerable<Assembly> assemblies, ModifiableAssembly patchedAssembly)
+    internal static void RunPatches(IEnumerable<Assembly> assemblies, ModifiableAssembly assemblyToModify)
     {
         Lg.Verbose("Running free patches");
 
@@ -17,12 +19,33 @@ internal static class FreePatcher
 
             try
             {
-                patcher.Invoke(null, new object[] { patchedAssembly.ModuleDefinition });
+                assemblyToModify.Modified = true;
+                patcher.Invoke(null, new object[] { assemblyToModify.ModuleDefinition });
             }
             catch (Exception e)
             {
                 Lg.Error($"Exception running free patch {patcher.FullDescription()}: {e}");
             }
+        }
+    }
+
+    private static bool IsDefinedSafe<T>(ICustomAttributeProvider provider) where T : Attribute
+    {
+        try
+        {
+            return provider.IsDefined(typeof(T), false);
+        }
+        catch (FileNotFoundException)
+        {
+            return false;
+        }
+        catch (TypeLoadException)
+        {
+            return false;
+        }
+        catch (MissingMethodException)
+        {
+            return false;
         }
     }
 
@@ -32,6 +55,6 @@ internal static class FreePatcher
             .SelectMany(asm => asm.GetTypes())
             .Where(AccessTools.IsStatic)
             .SelectMany(AccessTools.GetDeclaredMethods)
-            .Where(m => m.IsDefined(typeof(FreePatchAttribute)));
+            .Where(IsDefinedSafe<FreePatchAttribute>);
     }
 }

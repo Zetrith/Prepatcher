@@ -34,8 +34,9 @@ internal class TestPatches : TestBase
     [Test]
     public void TestInjections()
     {
-        Injections.TestSomeCompInjection().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[1])));
+        Injections.TestOtherCompInjection().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[1])));
         Injections.TestCompInjection().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
+        Injections.TestCompInjection_DoubleInit().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
         Injections.TestCompBaseInjection().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
         Injections.TestCompInjectionOnSubType().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));
         Injections.TestCompBaseInjectionOnSubType().Do(c => Assert.That(c, Is.EqualTo(c.parent.comps[0])));

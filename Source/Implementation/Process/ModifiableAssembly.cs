@@ -7,21 +7,27 @@ namespace Prepatcher.Process;
 public class ModifiableAssembly
 {
     public string FriendlyName { get; }
+
     public Assembly? SourceAssembly { get; set; }
     public AssemblyDefinition AsmDefinition { get; }
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
-    public bool NeedsReload { get; set; }
-    public bool Modified { get; set; } // Used to dump modified assemblies
-    public bool Modifiable { get; set; } = true;
+
     public bool ProcessAttributes { get; set; }
+    public bool NeedsReload { get; set; }
+    public bool Modified { get; set; }
+    public bool Modifiable { get; set; } = true;
+
     public byte[] Bytes { get; private set; }
+    private byte[]? RawBytes { get; }
 
     public ModifiableAssembly(string friendlyName, Assembly sourceAssembly, IAssemblyResolver resolver)
     {
         FriendlyName = friendlyName;
         SourceAssembly = sourceAssembly;
+
+        RawBytes = UnsafeAssembly.GetRawData(sourceAssembly);
         AsmDefinition = AssemblyDefinition.ReadAssembly(
-            new MemoryStream(UnsafeAssembly.GetRawData(sourceAssembly)),
+            new MemoryStream(RawBytes),
             new ReaderParameters
             {
                 AssemblyResolver = resolver
@@ -39,6 +45,13 @@ public class ModifiableAssembly
 
     public void SerializeToByteArray()
     {
+        if (RawBytes != null && !Modified)
+        {
+            Lg.Verbose($"Assembly not modified, skipping serialization: {FriendlyName}");
+            Bytes = RawBytes;
+            return;
+        }
+
         Lg.Verbose($"Serializing: {FriendlyName}");
         var stream = new MemoryStream();
         AsmDefinition.Write(stream);
