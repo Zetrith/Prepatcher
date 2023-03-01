@@ -13,9 +13,8 @@ namespace BrokenAssembly
             return null;
         }
 
-        public static MissingClass Test(MissingEnum missing = MissingEnum.Missing)
+        public static void Test(MissingEnum missing = MissingEnum.Missing)
         {
-            return null;
         }
     }
 }

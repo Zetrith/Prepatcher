@@ -1,11 +1,5 @@
-﻿using System;
-
-namespace BrokenDependency
+﻿namespace BrokenDependency
 {
-    public class MissingClass
-    {
-    }
-
     public enum MissingEnum
     {
         Missing
