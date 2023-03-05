@@ -27,7 +27,7 @@ public static class Injections
 
     [PrepatcherField]
     [InjectComponent]
-    private static extern MyComponent MyCompBaseOnSuperType(this BaseClass target);
+    private static extern MyComponent MyCompBaseOnSuperType(this InjectionBase target);
 
     // Exact comp type, initializer type == target type
     public static BaseComp TestOtherCompInjection()

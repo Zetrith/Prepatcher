@@ -25,7 +25,7 @@ public class UniqueList<T> : IEnumerable<T>
 
     public void InsertRange(int index, IEnumerable<T> toInsert)
     {
-        foreach (var t in toInsert.Reverse())
+        foreach (var t in toInsert)
             if (set.Add(t))
                 list.Insert(index++, t);
     }

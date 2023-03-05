@@ -141,6 +141,9 @@ internal class ModManager
 
         HandleDrag();
 
+        if (Widgets.ButtonInvisible(rect, doMouseoverSound: false) && !ShiftIsHeld && !ControlIsHeld)
+            ClearSelection();
+
         ModLists.PostUpdate();
     }
 
@@ -209,7 +212,12 @@ internal class ModManager
 
             Find.WindowStack.ImmediateWindow(
                 12345,
-                new Rect(mousePos.x + mouseToCornerAtStart.x, mousePos.y - 13f, modItemWidth, ItemHeight * Math.Min(DraggedMods.Count, 30)),
+                new Rect(
+                    mousePos.x + mouseToCornerAtStart.x,
+                    mousePos.y + mouseToCornerAtStart.y - DraggedMods.IndexOf(draggedMod!) * ItemHeight,
+                    modItemWidth,
+                    ItemHeight * Math.Min(DraggedMods.Count, 30)
+                ),
                 WindowLayer.Super, DoDraggedMods, doBackground: false, shadowAlpha: 0f
             );
         }
