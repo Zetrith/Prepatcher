@@ -138,10 +138,12 @@ internal partial class FieldAdder
 
     internal static IEnumerable<MethodDefinition> GetAllPrepatcherFieldAccessors(IEnumerable<TypeDefinition> inTypes)
     {
-        return inTypes
-            .Where(t => t.IsSealed && t.IsAbstract) // IsStatic
-            .SelectMany(t => t.Methods)
-            .Where(m => m.HasCustomAttribute(typeof(PrepatcherFieldAttribute).FullName));
+        return
+            from t in inTypes
+            where t.IsSealed && t.IsAbstract // IsStatic
+            from m in t.Methods
+            where m.HasCustomAttribute(typeof(PrepatcherFieldAttribute).FullName)
+            select m;
     }
 }
 

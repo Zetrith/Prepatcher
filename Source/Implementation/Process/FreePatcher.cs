@@ -50,10 +50,12 @@ internal static class FreePatcher
 
     private static IEnumerable<MethodInfo> FindAllFreePatches(IEnumerable<Assembly> assemblies)
     {
-        return assemblies
-            .SelectMany(asm => asm.GetTypes())
-            .Where(AccessTools.IsStatic)
-            .SelectMany(AccessTools.GetDeclaredMethods)
-            .Where(IsDefinedSafe<FreePatchAttribute>);
+        return
+            from asm in assemblies
+            from type in asm.GetTypes()
+            where AccessTools.IsStatic(type)
+            from m in AccessTools.GetDeclaredMethods(type)
+            where IsDefinedSafe<FreePatchAttribute>(m)
+            select m;
     }
 }

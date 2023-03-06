@@ -117,8 +117,9 @@ internal static class GameProcessing
 
     private static IEnumerable<(ModContentPack, Assembly)> GetUniqueModAssemblies()
     {
-        return LoadedModManager.RunningModsListForReading.SelectMany(
-            m => from a in m.assemblies.loadedAssemblies select (m, a)
-        ).Distinct();
+        return
+            from m in LoadedModManager.RunningModsListForReading
+            from a in m.assemblies.loadedAssemblies
+            select (m, a);
     }
 }

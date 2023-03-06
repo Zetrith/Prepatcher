@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Linq;
 using System.Reflection;
+using System.Threading;
 using HarmonyLib;
 using Prepatcher.Process;
 using Prestarter;
@@ -20,7 +21,7 @@ internal static class Loader
 
     internal static void Reload()
     {
-        PrepatcherMod.abortEvent.Set();
+        PrepatcherMod.holdLoading = false;
 
         try
         {
@@ -111,7 +112,13 @@ internal static class Loader
 
         PrestarterInit.Init();
 
-        PrepatcherMod.abortEvent.Set();
+        PrepatcherMod.holdLoading = false;
+    }
+
+    internal static IEnumerator AbortThread(Thread t)
+    {
+        yield return null;
+        t.Abort();
     }
 
     private static void UnregisterWorkshopCallbacks()

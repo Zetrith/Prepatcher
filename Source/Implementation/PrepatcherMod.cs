@@ -12,7 +12,7 @@ internal class PrepatcherMod : Mod
     private const string CmdArgNoPrestarter = "noprestarter";
     private const string CmdArgVerbose = "verbose";
 
-    internal static ManualResetEvent abortEvent = new(false);
+    internal static volatile bool holdLoading = true;
 
     public PrepatcherMod(ModContentPack content) : base(content)
     {
@@ -42,17 +42,13 @@ internal class PrepatcherMod : Mod
             Find.Root.StartCoroutine(Loader.MinimalInit());
         }
 
-        try
-        {
-            abortEvent.WaitOne();
+        // Thread abortion counts as a crash
+        Prefs.data.resetModsConfigOnCrash = false;
 
-            Lg.Verbose("Aborting loading thread");
-            Thread.CurrentThread.Abort();
-        } catch (ThreadAbortException)
-        {
-            // Thread abortion counts as a crash
-            Prefs.data.resetModsConfigOnCrash = false;
-        }
+        while (holdLoading)
+            Thread.Sleep(50);
+
+        Thread.CurrentThread.Abort();
     }
 
     private static void InitLg()
