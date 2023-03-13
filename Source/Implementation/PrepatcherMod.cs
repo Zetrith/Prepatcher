@@ -27,6 +27,8 @@ internal class PrepatcherMod : Mod
             return;
         }
 
+        EditWindow_Log.wantsToOpen = false;
+
         DataStore.startedOnce = true;
         Lg.Info("Starting...");
 

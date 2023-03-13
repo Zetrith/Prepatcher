@@ -115,12 +115,6 @@ internal static class Loader
         PrepatcherMod.holdLoading = false;
     }
 
-    internal static IEnumerator AbortThread(Thread t)
-    {
-        yield return null;
-        t.Abort();
-    }
-
     private static void UnregisterWorkshopCallbacks()
     {
         Lg.Verbose("Unregistering workshop callbacks");
