@@ -11,6 +11,7 @@ internal class PrepatcherMod : Mod
 
     private const string CmdArgNoPrestarter = "noprestarter";
     private const string CmdArgVerbose = "verbose";
+    public const string EnvVarNoPrestarter = "NoPrestarter";
 
     internal static volatile bool holdLoading = true;
 
@@ -20,6 +21,7 @@ internal class PrepatcherMod : Mod
         settings = GetSettings<Settings>();
 
         HarmonyPatches.PatchModLoading();
+        HarmonyPatches.PatchRestarting();
 
         if (DataStore.startedOnce)
         {
@@ -34,7 +36,9 @@ internal class PrepatcherMod : Mod
 
         HarmonyPatches.SilenceLogging();
 
-        if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) || settings.disablePrestarter)
+        if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) ||
+            !Environment.GetEnvironmentVariable(EnvVarNoPrestarter).NullOrEmpty() ||
+            settings.disablePrestarter)
         {
             Loader.Reload();
         }

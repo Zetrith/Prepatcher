@@ -35,6 +35,14 @@ internal static class HarmonyPatches
             InitVersionedDataPostfix(modMeta);
     }
 
+    internal static void PatchRestarting()
+    {
+        harmony.Patch(
+            typeof(GenCommandLine).GetMethod("Restart"),
+            transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(RestartPatch))
+        );
+    }
+
     internal static void SilenceLogging()
     {
         // Don't print thread abortion errors to log
@@ -167,5 +175,27 @@ internal static class HarmonyPatches
         return result ||
                __instance.packageId.ToLowerInvariant() == "brrainz.harmony" &&
                ModLister.GetActiveModWithIdentifier("zetrith.prepatcher", ignorePostfix: true) != null;
+    }
+
+    private static IEnumerable<CodeInstruction> RestartPatch(IEnumerable<CodeInstruction> insts)
+    {
+        var processStart = AccessTools.Method(typeof(System.Diagnostics.Process), nameof(System.Diagnostics.Process.Start));
+        foreach (var inst in insts)
+        {
+            if (inst.operand == processStart)
+            {
+                yield return new CodeInstruction(
+                    OpCodes.Call,
+                    AccessTools.Method(typeof(HarmonyPatches), nameof(SetNoPrestarterEnvVariable)));
+            }
+
+            yield return inst;
+        }
+    }
+
+    private static void SetNoPrestarterEnvVariable()
+    {
+        // The env variables will get inherited by the child process started in GenCommandLine.Restart
+        Environment.SetEnvironmentVariable(PrepatcherMod.EnvVarNoPrestarter, "1");
     }
 }
