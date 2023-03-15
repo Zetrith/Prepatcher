@@ -50,8 +50,10 @@ internal static class GameProcessing
 
         // Field addition
         var fieldAdder = new FieldAdder(set);
-        RegisterInjections(fieldAdder);
+        GameInjections.RegisterInjections(fieldAdder);
         fieldAdder.ProcessAllAssemblies();
+
+        ExecutionOrderFixer.ApplyExecutionOrderAttributes(asmCSharp.ModuleDefinition);
 
         // Free patching
         FreePatcher.RunPatches(modAsms, asmCSharp);
@@ -80,39 +82,6 @@ internal static class GameProcessing
             if (asm.Modified)
                 File.WriteAllBytes(Path.Combine(path, asm.AsmDefinition.Name.Name + ".dll"), asm.Bytes);
         }
-    }
-
-    private static void RegisterInjections(FieldAdder fieldAdder)
-    {
-        Lg.Verbose("Registering injections");
-
-        fieldAdder.RegisterInjection(
-            typeof(ThingWithComps),
-            typeof(ThingComp),
-            nameof(ThingWithComps.InitializeComps),
-            nameof(ThingWithComps.comps)
-        );
-
-        fieldAdder.RegisterInjection(
-            typeof(Map),
-            typeof(MapComponent),
-            nameof(Map.FillComponents),
-            nameof(Map.components)
-        );
-
-        fieldAdder.RegisterInjection(
-            typeof(World),
-            typeof(WorldComponent),
-            nameof(World.FillComponents),
-            nameof(World.components)
-        );
-
-        fieldAdder.RegisterInjection(
-            typeof(Game),
-            typeof(GameComponent),
-            nameof(Game.FillComponents),
-            nameof(Game.components)
-        );
     }
 
     private static IEnumerable<(ModContentPack, Assembly)> GetUniqueModAssemblies()

@@ -25,6 +25,12 @@ internal class PrepatcherMod : Mod
 
         if (DataStore.startedOnce)
         {
+            AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += (sender, args) =>
+            {
+                Lg.Verbose($"ReflectionOnlyAssemblyResolve: {args.RequestingAssembly} requested {args.Name}");
+                return null;
+            };
+
             Lg.Info($"Restarted with the patched assembly, going silent.");
             return;
         }
