@@ -1,5 +1,5 @@
 # Prepatcher
-![Latest API version](https://img.shields.io/nuget/v/Zetrith.Prepatcher?label=Zetrith.Prepatcher)
+[![Latest API version](https://img.shields.io/nuget/v/Zetrith.Prepatcher?label=Zetrith.Prepatcher)](https://www.nuget.org/packages/Zetrith.Prepatcher)
 
 Structured assembly rewriting library/mod for RimWorld
 
