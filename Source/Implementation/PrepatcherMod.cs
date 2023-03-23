@@ -65,11 +65,11 @@ internal class PrepatcherMod : Mod
 
     private static void InitLg()
     {
-        Lg.InfoFunc = msg => Log.Message($"Prepatcher: {msg}");
-        Lg.ErrorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
+        Lg._infoFunc = msg => Log.Message($"Prepatcher: {msg}");
+        Lg._errorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
         if (GenCommandLine.CommandLineArgPassed(CmdArgVerbose))
-            Lg.VerboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
+            Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
     }
 
     public override void DoSettingsWindowContents(Rect inRect)

@@ -21,8 +21,8 @@ internal class TestBase
 
     public virtual void Setup()
     {
-        Lg.InfoFunc = Console.WriteLine;
-        Lg.ErrorFunc = msg =>
+        Lg._infoFunc = Console.WriteLine;
+        Lg._errorFunc = msg =>
         {
             Console.WriteLine(msg);
             throw new LogErrorException($"{msg}");
