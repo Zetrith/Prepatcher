@@ -45,6 +45,7 @@ internal static class GameProcessing
 
         // Other code assumes that these always get reloaded
         asmCSharp.NeedsReload = true;
+        asmCSharp.Modified = true;
         set.FindModifiableAssembly("0Harmony")!.NeedsReload = true;
 
         // Field addition
