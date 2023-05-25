@@ -13,13 +13,13 @@ internal partial class FieldAdder
     {
         Lg.Verbose("Patching the ctors with field constant default");
 
-        var obj = attribute.ConstructorArguments.First().Value;
-        var defaultValue = obj is CustomAttributeArgument arg ? arg.Value : obj;
+        var defaultValueObj = attribute.ConstructorArguments.First().Value;
+        var defaultValue = defaultValueObj is CustomAttributeArgument arg ? arg.Value : defaultValueObj;
 
         if (defaultValue == null)
             return;
 
-        ReplaceRetsInCtors(newField.DeclaringType, new []
+        ReplaceRetsInCtors(newField.DeclaringType, () => new []
         {
             Instruction.Create(OpCodes.Ldarg_0),
             Type.GetTypeCode(defaultValue.GetType()) switch
@@ -41,9 +41,10 @@ internal partial class FieldAdder
     {
         Lg.Verbose("Patching the ctors with field initializer");
 
-        var initializer = accessor.DeclaringType.FindMethod((string)attribute.ConstructorArguments.First().Value);
+        var initializerMethodName = (string)attribute.ConstructorArguments.First().Value;
+        var initializer = accessor.DeclaringType.FindMethod(initializerMethodName);
 
-        ReplaceRetsInCtors(newField.DeclaringType, new []
+        ReplaceRetsInCtors(newField.DeclaringType, () => new []
         {
             Instruction.Create(OpCodes.Ldarg_0),
             Instruction.Create(initializer.Parameters.Count() == 1 ? OpCodes.Ldarg_0 : OpCodes.Nop),
@@ -53,15 +54,15 @@ internal partial class FieldAdder
         });
     }
 
-    private void ReplaceRetsInCtors(TypeDefinition typeDef, IEnumerable<Instruction> replacement)
+    private void ReplaceRetsInCtors(TypeDefinition typeDef, Func<IEnumerable<Instruction>> replacementGetter)
     {
-        var replacementList = replacement.ToList();
-        var firstReplacement = replacementList[0];
-        replacementList.RemoveAt(0);
-
         foreach (var ctor in typeDef.GetConstructors().Where(c => !c.IsStatic))
         {
             if (CallsAThisCtor(ctor)) continue;
+
+            var replacementList = replacementGetter().ToList();
+            var firstReplacement = replacementList[0];
+            replacementList.RemoveAt(0);
 
             var insts = ctor.Body.Instructions;
 

@@ -8,6 +8,10 @@
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
     <ItemGroup>
       <PackageReference Include="Krafs.Publicizer" Version="2.0.1">
         <PrivateAssets>all</PrivateAssets>

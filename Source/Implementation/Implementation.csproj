@@ -12,6 +12,10 @@
         <AssemblyName>PrepatcherImpl</AssemblyName>
     </PropertyGroup>
 
+    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+      <DebugType>none</DebugType>
+    </PropertyGroup>
+
   <ItemGroup>
 
     <!-- Nuget dependencies -->

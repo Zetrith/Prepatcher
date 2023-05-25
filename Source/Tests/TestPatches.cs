@@ -48,11 +48,33 @@ internal class TestPatches : TestBase
     {
         var targetObj = new TargetClass();
 
+        Assert.That(targetObj.MyBoolDefaultFalse(), Is.EqualTo(false));
+        Assert.That(targetObj.MyBoolDefaultTrue(), Is.EqualTo(true));
+
         Assert.That(targetObj.MyIntDefaultMin(), Is.EqualTo(int.MinValue));
         Assert.That(targetObj.MyIntDefaultMax(), Is.EqualTo(int.MaxValue));
         Assert.That(targetObj.MyIntDefaultNull(), Is.EqualTo(0));
+
         Assert.That(targetObj.MyUIntDefaultMin(), Is.EqualTo(uint.MinValue));
         Assert.That(targetObj.MyUIntDefaultMax(), Is.EqualTo(uint.MaxValue));
+        Assert.That(targetObj.MyUIntDefaultNull(), Is.EqualTo(0u));
+
+        Assert.That(targetObj.MyLongDefaultMin(), Is.EqualTo(long.MinValue));
+        Assert.That(targetObj.MyLongDefaultMax(), Is.EqualTo(long.MaxValue));
+        Assert.That(targetObj.MyLongDefaultNull(), Is.EqualTo(0L));
+
+        Assert.That(targetObj.MyULongDefaultMin(), Is.EqualTo(ulong.MinValue));
+        Assert.That(targetObj.MyULongDefaultMax(), Is.EqualTo(ulong.MaxValue));
+        Assert.That(targetObj.MyULongDefaultNull(), Is.EqualTo(0UL));
+
+        Assert.That(targetObj.MyFloatDefaultMin(), Is.EqualTo(float.MinValue));
+        Assert.That(targetObj.MyFloatDefaultMax(), Is.EqualTo(float.MaxValue));
+        Assert.That(targetObj.MyFloatDefaultNull(), Is.EqualTo(0f));
+
+        Assert.That(targetObj.MyDoubleDefaultMin(), Is.EqualTo(double.MinValue));
+        Assert.That(targetObj.MyDoubleDefaultMax(), Is.EqualTo(double.MaxValue));
+        Assert.That(targetObj.MyDoubleDefaultNull(), Is.EqualTo(0d));
+
         Assert.That(targetObj.MyStringDefault(), Is.EqualTo("a"));
         Assert.That(targetObj.MyStringDefaultNull(), Is.EqualTo(null));
     }

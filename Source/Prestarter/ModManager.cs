@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using RimWorld;
+using Steamworks;
 using UnityEngine;
 using Verse;
 
@@ -394,6 +395,28 @@ internal class ModManager
         // Changed group
         if (selectedMods.Count > 0 && active.Contains(selectedMods[0]) != active.Contains(mod))
         {
+            SetOnlySelection(mod);
+            return;
+        }
+
+        // Right click action
+        if (Event.current.button == 1)
+        {
+            var modData = ModData(mod);
+            if (modData != null)
+                Find.WindowStack.Add(new FloatMenu(new List<FloatMenuOption>
+                {
+                    new("Open folder", () =>
+                    {
+                        Application.OpenURL(modData.RootDir.FullName);
+                    }),
+                    new("Download update", () =>
+                    {
+                        if (modData.publishedFileIdInt != PublishedFileId_t.Invalid)
+                            Log.Message($"Prestarter: download update {SteamUGC.DownloadItem(modData.publishedFileIdInt, true)}");
+                    })
+                }));
+
             SetOnlySelection(mod);
             return;
         }
