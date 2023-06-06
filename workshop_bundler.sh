@@ -1,3 +1,5 @@
+rm -rf Assemblies/
+
 cd Source
 dotnet build --configuration Release
 cd ..

@@ -38,7 +38,7 @@ internal class PrepatcherMod : Mod
         EditWindow_Log.wantsToOpen = false;
 
         DataStore.startedOnce = true;
-        Lg.Info("Starting...");
+        Lg.Info($"Starting... (vanilla load took {Time.realtimeSinceStartup}s)");
 
         HarmonyPatches.SilenceLogging();
 
