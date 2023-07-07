@@ -1,11 +1,14 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Reflection.Emit;
 using HarmonyLib;
+using Prestarter;
 using RimWorld;
 using UnityEngine;
 using Verse;
+using Debug = UnityEngine.Debug;
 
 namespace Prepatcher;
 
@@ -37,11 +40,50 @@ internal static class HarmonyPatches
 
     internal static void PatchRestarting()
     {
+        // Don't show Prestarter after the game restarts (f.e. after changing the mod list)
         harmony.Patch(
             typeof(GenCommandLine).GetMethod("Restart"),
             transpiler: new HarmonyMethod(typeof(HarmonyPatches), nameof(RestartPatch))
         );
     }
+
+    internal static void PatchGUI()
+    {
+        harmony.Patch(
+            AccessTools.Method(typeof(GUIUtility), "GetControlID", new[] { typeof(int), typeof(FocusType), typeof(Rect) }),
+            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(Patch))
+        );
+    }
+
+    private static void Patch(ref int __result)
+    {
+        if (ModManager.nextControlId != null)
+        {
+            __result = ModManager.nextControlId.Value;
+            ModManager.nextControlId = null;
+        }
+    }
+
+    internal static void AddVerboseProfiling()
+    {
+        harmony.Patch(
+            typeof(ModLister).GetMethod("RebuildModList"),
+            prefix: new HarmonyMethod(typeof(HarmonyPatches), nameof(ProfilingPrefix)),
+            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(ProfilingPostfix))
+        );
+
+        harmony.Patch(
+            typeof(ModMetaData).GetMethod("Init", BindingFlags.Instance | BindingFlags.NonPublic),
+            prefix: new HarmonyMethod(typeof(HarmonyPatches), nameof(ProfilingPrefix)),
+            postfix: new HarmonyMethod(typeof(HarmonyPatches), nameof(ProfilingPostfix))
+        );
+    }
+
+    private static void ProfilingPrefix(object __instance, MethodBase __originalMethod)
+        => DeepProfiler.Start(__originalMethod + (__instance is ModMetaData mod ? $" {mod.FolderName}" : ""));
+
+    private static void ProfilingPostfix()
+        => DeepProfiler.End();
 
     internal static void SilenceLogging()
     {

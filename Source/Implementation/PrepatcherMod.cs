@@ -22,6 +22,8 @@ internal class PrepatcherMod : Mod
 
         HarmonyPatches.PatchModLoading();
         HarmonyPatches.PatchRestarting();
+        HarmonyPatches.AddVerboseProfiling();
+        HarmonyPatches.PatchGUI();
 
         if (DataStore.startedOnce)
         {

@@ -12,7 +12,7 @@ namespace Prestarter;
 
 // Based on the vanilla mod manager
 [HotSwappable]
-internal class ModManager
+public class ModManager
 {
     private UniqueList<string> inactive;
     private UniqueList<string> active; // Mod ids with postfixes
@@ -92,6 +92,8 @@ internal class ModManager
         }
     }
 
+    public static int? nextControlId;
+
     internal void Draw(Rect rect)
     {
         ModLists.Update(this);
@@ -142,6 +144,7 @@ internal class ModManager
 
         HandleDrag();
 
+        nextControlId = "ButtonInvisible".GetHashCode();
         if (Widgets.ButtonInvisible(rect, doMouseoverSound: false) && !ShiftIsHeld && !ControlIsHeld)
             ClearSelection();
 
@@ -414,7 +417,8 @@ internal class ModManager
                     {
                         if (modData.publishedFileIdInt != PublishedFileId_t.Invalid)
                             Log.Message($"Prestarter: download update {SteamUGC.DownloadItem(modData.publishedFileIdInt, true)}");
-                    })
+                    }),
+                    new("Rebuild mod list", ModLister.RebuildModList)
                 }));
 
             SetOnlySelection(mod);

@@ -48,6 +48,10 @@ internal static class GameProcessing
         asmCSharp.Modified = true;
         set.FindModifiableAssembly("0Harmony")!.NeedsReload = true;
 
+        var monoModUtils = set.FindModifiableAssembly("MonoMod.Utils");
+        if (monoModUtils != null)
+            monoModUtils.NeedsReload = true;
+
         // Field addition
         var fieldAdder = new FieldAdder(set);
         GameInjections.RegisterInjections(fieldAdder);
