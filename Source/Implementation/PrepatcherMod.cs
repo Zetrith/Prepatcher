@@ -9,11 +9,10 @@ internal class PrepatcherMod : Mod
 {
     public static Settings settings;
 
-    private const string CmdArgNoPrestarter = "noprestarter";
     private const string CmdArgVerbose = "verbose";
-    public const string EnvVarNoPrestarter = "NoPrestarter";
 
-    internal static volatile bool holdLoading = true;
+    internal const string PrepatcherModId = "zetrith.prepatcher";
+    internal const string HarmonyModId = "brrainz.harmony";
 
     public PrepatcherMod(ModContentPack content) : base(content)
     {
@@ -21,9 +20,10 @@ internal class PrepatcherMod : Mod
         settings = GetSettings<Settings>();
 
         HarmonyPatches.PatchModLoading();
-        HarmonyPatches.PatchRestarting();
         HarmonyPatches.AddVerboseProfiling();
         HarmonyPatches.PatchGUI();
+
+        HarmonyPatches.SetLoadingStage("Initializing Prepatcher");
 
         if (DataStore.startedOnce)
         {
@@ -37,30 +37,16 @@ internal class PrepatcherMod : Mod
             return;
         }
 
-        EditWindow_Log.wantsToOpen = false;
+        // EditWindow_Log.wantsToOpen = false;
 
         DataStore.startedOnce = true;
         Lg.Info($"Starting... (vanilla load took {Time.realtimeSinceStartup}s)");
 
         HarmonyPatches.SilenceLogging();
-
-        if (GenCommandLine.CommandLineArgPassed(CmdArgNoPrestarter) ||
-            !Environment.GetEnvironmentVariable(EnvVarNoPrestarter).NullOrEmpty() ||
-            settings.disablePrestarter)
-        {
-            Loader.Reload();
-        }
-        else
-        {
-            // Init on main thread
-            Find.Root.StartCoroutine(Loader.MinimalInit());
-        }
+        Loader.Reload();
 
         // Thread abortion counts as a crash
         Prefs.data.resetModsConfigOnCrash = false;
-
-        while (holdLoading)
-            Thread.Sleep(50);
 
         Thread.CurrentThread.Abort();
     }

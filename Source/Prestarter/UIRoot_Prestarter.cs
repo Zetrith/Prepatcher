@@ -6,6 +6,7 @@ using Verse;
 
 namespace Prestarter;
 
+[HotSwappable]
 public class UIRoot_Prestarter : UIRoot
 {
     private ModManager manager;
@@ -26,7 +27,7 @@ public class UIRoot_Prestarter : UIRoot
         // showManager = false;
     }
 
-    const float managerWidth = 800f;
+    const float managerWidth = 1100f;
     const float managerHeight = 700f;
 
     public override void UIRootOnGUI()

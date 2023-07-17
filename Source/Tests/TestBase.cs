@@ -94,6 +94,6 @@ internal class TestBase
     protected static void WriteAssembly(ModifiableAssembly asm)
     {
         // Replaces the actual assembly file that will get auto-loaded by the runtime
-        File.WriteAllBytes(asm.AsmDefinition.ShortName() + ".dll", asm.Bytes);
+        File.WriteAllBytes(asm.AsmDefinition.ShortName() + ".dll", asm.Bytes!);
     }
 }

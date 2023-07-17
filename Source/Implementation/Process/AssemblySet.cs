@@ -6,7 +6,7 @@ using Mono.Cecil;
 namespace Prepatcher.Process;
 
 // Assumption: there only exists one assembly with a given name (just name, not f.e. name+version pair)
-public class AssemblySet
+public class AssemblySet : IAssemblySet
 {
     internal List<ModifiableAssembly> AllAssemblies { get; } = new();
     private Dictionary<string, ModifiableAssembly> nameToAsm = new();
@@ -17,7 +17,7 @@ public class AssemblySet
         Resolver = new AssemblyResolver(this);
     }
 
-    internal ModifiableAssembly AddAssembly(string friendlyName, Assembly asm)
+    public ModifiableAssembly AddAssembly(string friendlyName, Assembly asm)
     {
         Lg.Verbose($"Adding assembly {friendlyName}");
         var masm = new ModifiableAssembly(friendlyName, asm, Resolver);
@@ -26,7 +26,7 @@ public class AssemblySet
         return masm;
     }
 
-    internal ModifiableAssembly AddAssembly(string friendlyName, string asmFilePath)
+    public ModifiableAssembly AddAssembly(string friendlyName, string asmFilePath)
     {
         Lg.Verbose($"Adding assembly {friendlyName}");
         var masm = new ModifiableAssembly(friendlyName, asmFilePath, Resolver);
@@ -35,14 +35,19 @@ public class AssemblySet
         return masm;
     }
 
-    internal ModifiableAssembly? FindModifiableAssembly(string name)
+    public bool HasAssembly(string name)
+    {
+        return nameToAsm.ContainsKey(name);
+    }
+
+    public ModifiableAssembly? FindAssembly(string name)
     {
         return nameToAsm.GetValueSafe(name);
     }
 
-    internal ModifiableAssembly? FindModifiableAssembly(TypeDefinition typeDef)
+    internal ModifiableAssembly? FindAssembly(TypeDefinition typeDef)
     {
-        return FindModifiableAssembly(typeDef.Module.Assembly.ShortName());
+        return FindAssembly(typeDef.Module.Assembly.ShortName());
     }
 
     internal TypeDefinition ReflectionToCecil(Type type)
@@ -58,7 +63,7 @@ public class AssemblySet
         foreach (var asm in nameToAsm.Values)
         foreach (var reference in asm.ModuleDefinition.AssemblyReferences)
         {
-            var refAsm = FindModifiableAssembly(reference.Name);
+            var refAsm = FindAssembly(reference.Name);
             if (refAsm == null) continue;
 
             if (!dependants.TryGetValue(refAsm, out var set))
@@ -81,7 +86,7 @@ public class AssemblySet
 
         public AssemblyDefinition? Resolve(AssemblyNameReference name)
         {
-            return processor.FindModifiableAssembly(name.Name)?.AsmDefinition;
+            return processor.FindAssembly(name.Name)?.AsmDefinition;
         }
 
         public AssemblyDefinition? Resolve(AssemblyNameReference name, ReaderParameters parameters)

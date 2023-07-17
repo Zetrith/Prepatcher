@@ -35,7 +35,7 @@ internal partial class FieldAdder
     {
         if (CheckFieldAccessor(accessor) is { } error)
         {
-            var accessorAsm = set.FindModifiableAssembly(accessor.DeclaringType);
+            var accessorAsm = set.FindAssembly(accessor.DeclaringType);
             Lg.Error($"{accessorAsm}: {error} for new field with accessor {accessor.MemberFullName()}");
             return;
         }
@@ -69,7 +69,7 @@ internal partial class FieldAdder
         var ceTargetType = targetType.Module.Resolve(targetType);
         ceTargetType.Fields.Add(ceField);
 
-        var targetAsm = set.FindModifiableAssembly(targetType)!;
+        var targetAsm = set.FindAssembly(targetType)!;
         targetAsm.NeedsReload = true;
         targetAsm.Modified = true;
 
@@ -104,7 +104,7 @@ internal partial class FieldAdder
         il.Emit(accessor.ReturnType.IsByReference ? OpCodes.Ldflda : OpCodes.Ldfld, fieldRef);
         il.Emit(OpCodes.Ret);
 
-        var accessorAsm = set.FindModifiableAssembly(accessor.DeclaringType)!;
+        var accessorAsm = set.FindAssembly(accessor.DeclaringType)!;
         accessorAsm.NeedsReload = true;
         accessorAsm.Modified = true;
     }

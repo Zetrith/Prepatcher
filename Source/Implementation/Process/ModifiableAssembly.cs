@@ -15,9 +15,9 @@ public class ModifiableAssembly
     public bool ProcessAttributes { get; set; }
     public bool NeedsReload { get; set; }
     public bool Modified { get; set; }
-    public bool Modifiable { get; set; } = true;
+    public bool AllowPatches { get; set; } = true;
 
-    public byte[] Bytes { get; private set; }
+    public byte[]? Bytes { get; private set; }
     private byte[]? RawBytes { get; }
 
     public ModifiableAssembly(string friendlyName, Assembly sourceAssembly, IAssemblyResolver resolver)
@@ -39,7 +39,7 @@ public class ModifiableAssembly
         FriendlyName = friendlyName;
         AsmDefinition = AssemblyDefinition.ReadAssembly(
             path,
-            new ReaderParameters { AssemblyResolver = resolver, InMemory = true}
+            new ReaderParameters { AssemblyResolver = resolver, InMemory = true }
         );
     }
 

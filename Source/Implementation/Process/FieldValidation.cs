@@ -21,7 +21,7 @@ internal partial class FieldAdder
         if (!GenericArgumentsOf(accessor.Parameters.First().ParameterType).SequenceEqual(accessor.GenericParameters))
             return "The generic arguments of the target type don't match the generic parameters of the accessor";
 
-        if (!set.FindModifiableAssembly(target)!.Modifiable)
+        if (!set.FindAssembly(target)!.AllowPatches)
             return "Target type is not modifiable";
 
         if (HasInjection(accessor))
