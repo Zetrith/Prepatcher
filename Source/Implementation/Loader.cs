@@ -140,6 +140,9 @@ internal static class Loader
             HarmonyPatches.SilenceLogging();
             HarmonyPatches.CancelSounds();
 
+            // Undo Vanilla Framework Expanded patches which break the mod manager
+            new Harmony("prepatcher").UnpatchAll("OskarPotocki.VFECore");
+
             // LongEventHandler wants to show tips after uiRoot != null but none are loaded
             LongEventHandler.currentEvent.showExtraUIInfo = false;
 
