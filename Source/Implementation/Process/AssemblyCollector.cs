@@ -7,40 +7,27 @@ using Verse;
 
 namespace Prepatcher.Process;
 
-internal class AssemblyCollector
+internal static class AssemblyCollector
 {
     internal const string AssemblyCSharp = "Assembly-CSharp";
 
-    internal static void PopulateAssemblySet(IAssemblySet set, out ModifiableAssembly? asmCSharp, out List<Assembly> modAsms)
+    internal static void CollectSystem(Action<string, string?, Assembly?> collector)
     {
-        // Add Assembly-CSharp
-        asmCSharp = set.AddAssembly(AssemblyCSharp, typeof(Game).Assembly);
+        // Collect Assembly-CSharp
+        collector(AssemblyCSharp, null, typeof(Game).Assembly);
 
-        // Add System and Unity assemblies
+        // Collect System and Unity assemblies
         foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
-        {
-            var name = AssemblyName.GetAssemblyName(asmPath);
-            if (name.Name != AssemblyCSharp)
-            {
-                var systemAsm = set.AddAssembly($"(System) {Path.GetFileName(asmPath)}", asmPath);
-                if (systemAsm != null)
-                    systemAsm.AllowPatches = false;
-            }
-        }
+            collector($"(System) {Path.GetFileName(asmPath)}", asmPath, null);
+    }
 
-        modAsms = new List<Assembly>();
-
-        // Add mod assemblies
+    internal static void CollectMods(Action<string, Assembly> collector)
+    {
+        // Collect mod assemblies
         foreach (var (mod, modAssembly) in GetModAssemblies())
         {
             var name = modAssembly.GetName().Name;
-            if (set.HasAssembly(name)) continue;
-
-            var masm = set.AddAssembly($"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
-            if (masm != null)
-                masm.ProcessAttributes = true;
-
-            modAsms.Add(modAssembly);
+            collector($"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
         }
     }
 

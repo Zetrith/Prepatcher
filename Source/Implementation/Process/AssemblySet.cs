@@ -6,7 +6,7 @@ using Mono.Cecil;
 namespace Prepatcher.Process;
 
 // Assumption: there only exists one assembly with a given name (just name, not f.e. name+version pair)
-public class AssemblySet : IAssemblySet
+public class AssemblySet
 {
     internal List<ModifiableAssembly> AllAssemblies { get; } = new();
     private Dictionary<string, ModifiableAssembly> nameToAsm = new();
@@ -17,19 +17,14 @@ public class AssemblySet : IAssemblySet
         Resolver = new AssemblyResolver(this);
     }
 
-    public ModifiableAssembly AddAssembly(string friendlyName, Assembly asm)
+    public ModifiableAssembly AddAssembly(string friendlyName, string? asmFilePath, Assembly? asm)
     {
         Lg.Verbose($"Adding assembly {friendlyName}");
-        var masm = new ModifiableAssembly(friendlyName, asm, Resolver);
-        nameToAsm[masm.AsmDefinition.ShortName()] = masm;
-        AllAssemblies.Add(masm);
-        return masm;
-    }
 
-    public ModifiableAssembly AddAssembly(string friendlyName, string asmFilePath)
-    {
-        Lg.Verbose($"Adding assembly {friendlyName}");
-        var masm = new ModifiableAssembly(friendlyName, asmFilePath, Resolver);
+        var masm = asmFilePath != null ?
+            new ModifiableAssembly(friendlyName, asmFilePath, Resolver) :
+            new ModifiableAssembly(friendlyName, asm!, Resolver);
+
         nameToAsm[masm.AsmDefinition.ShortName()] = masm;
         AllAssemblies.Add(masm);
         return masm;

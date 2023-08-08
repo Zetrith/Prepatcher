@@ -85,7 +85,7 @@ internal static partial class HarmonyPatches
 
         if (DataStore.openModManager)
         {
-            Find.Root.StartCoroutine(Loader.MinimalInit());
+            Find.Root.StartCoroutine(MinimalInit.DoInit());
 
             // Thread abortion counts as a crash
             Prefs.data.resetModsConfigOnCrash = false;
