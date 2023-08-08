@@ -71,20 +71,21 @@ internal static class MinimalInit
     // Run from Prestarter to apply potential mod list changes before running free patches
     private static void ReloadModAssemblies()
     {
-        Dictionary<string, string> assemblies = new();
         List<Assembly> modAsms = new();
-
-        AssemblyCollector.CollectSystem((friendlyName, path, asm) =>
+        Dictionary<string, string> friendlyAssemblyNames = new()
         {
-            if (asm != null)
-                assemblies[asm.GetName().Name] = friendlyName;
-            else if (path != null)
-                assemblies[AssemblyName.GetAssemblyName(path).Name] = friendlyName;
+            [AssemblyCollector.AssemblyCSharp] = AssemblyCollector.AssemblyCSharp
+        };
+
+        AssemblyCollector.CollectSystem((friendlyName, path) =>
+        {
+            friendlyAssemblyNames[AssemblyName.GetAssemblyName(path).Name] = friendlyName;
         });
 
         AssemblyCollector.CollectMods((friendlyName, asm) =>
         {
-            if (assemblies.TryAdd(asm.GetName().Name, friendlyName))
+            // Don't add system assemblies packaged by mods
+            if (friendlyAssemblyNames.TryAdd(asm.GetName().Name, friendlyName))
                 modAsms.Add(asm);
         });
 
@@ -101,7 +102,7 @@ internal static class MinimalInit
             select a
         ).Do(asm =>
         {
-            Lg.Verbose($"Setting refonly after mod list change: {assemblies[asm.GetName().Name]}");
+            Lg.Verbose($"Setting refonly after mod list change: {friendlyAssemblyNames[asm.GetName().Name]}");
             UnsafeAssembly.SetReflectionOnly(asm, true);
         });
 

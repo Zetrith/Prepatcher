@@ -51,21 +51,23 @@ internal static class Loader
 
         var set = new AssemblySet();
         var modAsms = new List<Assembly>();
-        ModifiableAssembly? asmCSharp = null;
+        var asmCSharp =
+            set.AddAssembly(AssemblyCollector.AssemblyCSharp, null, typeof(Game).Assembly);
 
-        AssemblyCollector.CollectSystem((friendlyName, path, asm) =>
+        AssemblyCollector.CollectSystem((friendlyName, path) =>
         {
-            var addedAsm = set.AddAssembly(friendlyName, path, asm);
+            if (AssemblyName.GetAssemblyName(path).Name == AssemblyCollector.AssemblyCSharp)
+                return;
 
-            if (friendlyName == AssemblyCollector.AssemblyCSharp)
-                asmCSharp = addedAsm;
-            else if (path != null && AssemblyName.GetAssemblyName(path).Name != AssemblyCollector.AssemblyCSharp)
-                addedAsm.AllowPatches = false;
+            var addedAsm = set.AddAssembly(friendlyName, path, null);
+            addedAsm.AllowPatches = false;
         });
 
         AssemblyCollector.CollectMods((friendlyName, asm) =>
         {
             var name = asm.GetName().Name;
+
+            // Don't add system assemblies packaged by mods
             if (set.HasAssembly(name)) return;
 
             var addedAsm = set.AddAssembly(friendlyName, null, asm);
@@ -75,7 +77,7 @@ internal static class Loader
         });
 
         using (StopwatchScope.Measure("Game processing"))
-            GameProcessing.Process(set, asmCSharp!, modAsms);
+            GameProcessing.Process(set, asmCSharp, modAsms);
 
         // Reload the assemblies
         Reloader.Reload(
