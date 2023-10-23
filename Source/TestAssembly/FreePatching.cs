@@ -18,4 +18,19 @@ public static class FreePatching
             if (inst.OpCode == OpCodes.Ldc_I4_0)
                 inst.OpCode = OpCodes.Ldc_I4_1;
     }
+
+    [FreePatchAll]
+    static bool RewriteAllAssemblies(ModuleDefinition module)
+    {
+        var type = module.GetType($"{nameof(TestAssemblyTarget)}.{nameof(RewriteTarget)}");
+        if (type == null) return false;
+
+        var method = type.FindMethod(nameof(RewriteTarget.Method2));
+
+        foreach (var inst in method.Body.Instructions)
+            if ((string)inst.Operand == "a")
+                inst.Operand = "b";
+
+        return true;
+    }
 }

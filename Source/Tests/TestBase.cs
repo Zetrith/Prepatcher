@@ -14,10 +14,10 @@ internal class TestBase
     protected FieldAdder fieldAdder;
 
     protected ModifiableAssembly testAsm;
-    protected ModifiableAssembly targetAsm;
+    private ModifiableAssembly targetAsm;
 
-    protected Assembly liveTestAsm;
-    protected Assembly liveTargetAsm;
+    private Assembly liveTestAsm;
+    private Assembly liveTargetAsm;
 
     public virtual void Setup()
     {
@@ -33,11 +33,12 @@ internal class TestBase
         set = new AssemblySet();
         fieldAdder = new FieldAdder(set);
 
-        targetAsm = set.AddAssembly("TestAssemblyTarget.dll", "TestAssemblyTarget.dll", null);
+        targetAsm = set.AddAssembly("Test","TestAssemblyTarget.dll", "TestAssemblyTarget.dll", null);
         targetAsm.ProcessAttributes = true;
 
-        testAsm = set.AddAssembly("TestAssembly.dll", "TestAssembly.dll", null);
+        testAsm = set.AddAssembly("Test", "TestAssembly.dll", "TestAssembly.dll", null);
         testAsm.ProcessAttributes = true;
+        testAsm.SourceAssembly = liveTestAsm;
 
         var typeThingWithComps =
             targetAsm.ModuleDefinition.GetType($"{nameof(TestAssemblyTarget)}.{nameof(BaseWithComps)}");

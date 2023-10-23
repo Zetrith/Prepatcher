@@ -65,7 +65,7 @@ internal static partial class HarmonyPatches
             SetLoadingStage("Loading XML");
 
         if (label == "ApplyPatches()")
-            SetLoadingStage("Applying patches");
+            SetLoadingStage("Applying XML patches");
 
         if (label == "ParseAndProcessXML()")
             SetLoadingStage("Parsing XML");
@@ -106,7 +106,7 @@ internal static partial class HarmonyPatches
 
         rect.y += rect.height + 20;
         rect.height = 45f;
-        rect = rect.ExpandedBy(10, 0);
+        rect = rect.ExpandedBy(40, 0);
 
         Widgets.DrawWindowBackground(rect);
 
@@ -117,8 +117,8 @@ internal static partial class HarmonyPatches
             using (MpStyle.Set(new Color(pulse, pulse, pulse)))
                 Widgets.Label(rect,
                     DataStore.openModManager ?
-                    $"Waiting to open mod manager\n({DataStore.loadingStage})" :
-                    $"Press Space to open mod manager\n({DataStore.loadingStage})");
+                    $"{DataStore.loadingStage}\n(Waiting to open mod manager)" :
+                    $"{DataStore.loadingStage}\n(Press Space to open mod manager)");
 
         if (!DataStore.openModManager && Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Space)
             DataStore.openModManager = true;

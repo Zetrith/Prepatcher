@@ -10,7 +10,7 @@
         <AssemblyName>0PrepatcherAPI</AssemblyName>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <Authors>Zetrith</Authors>
-        <Version>1.1.1</Version>
+        <Version>1.2.0</Version>
         <Description>The API for Prepatcher, an assembly rewriting library for RimWorld.</Description>
         <PackageProjectUrl>https://github.com/Zetrith/Prepatcher</PackageProjectUrl>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>
@@ -25,6 +25,10 @@
 
   <ItemGroup>
     <Using Include="System" />
+
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>TestAssembly</_Parameter1>
+    </AssemblyAttribute>
   </ItemGroup>
 
 

@@ -1,19 +1,17 @@
-﻿using System.Collections.Generic;
-using System.Reflection;
-
-namespace Prepatcher.Process;
+﻿namespace Prepatcher.Process;
 
 internal static class GameProcessing
 {
-    internal static void Process(AssemblySet set, ModifiableAssembly asmCSharp, List<Assembly> modAsms)
+    internal static void Process(AssemblySet set)
     {
+        var asmCSharp = set.FindAssembly(AssemblyCollector.AssemblyCSharp)!;
+
         // Other code assumes that these always get reloaded
-        asmCSharp.NeedsReload = true;
-        set.FindAssembly("0Harmony")!.NeedsReload = true;
+        asmCSharp.SetNeedsReload();
+        set.FindAssembly("0Harmony")!.SetNeedsReload();
 
         var monoModUtils = set.FindAssembly("MonoMod.Utils");
-        if (monoModUtils != null)
-            monoModUtils.NeedsReload = true;
+        monoModUtils?.SetNeedsReload();
 
         // Field addition
         var fieldAdder = new FieldAdder(set);
@@ -25,6 +23,10 @@ internal static class GameProcessing
         asmCSharp.Modified = true; // Mark as modified so it's serialized and new attributes are applied
 
         // Free patching
-        FreePatcher.RunPatches(modAsms, asmCSharp);
+        FreePatcher.RunPatches(
+            set,
+            AssemblyCollector.AssemblyCSharp,
+            asm => HarmonyPatches.SetLoadingStage($"Applying prepatches from {asm.OwnerName}")
+        );
     }
 }

@@ -11,19 +11,20 @@ internal static class AssemblyCollector
 {
     internal const string AssemblyCSharp = "Assembly-CSharp";
 
-    internal static void CollectSystem(Action<string, string> collector)
+    internal static IEnumerable<(string, string)> SystemAssemblyPaths()
     {
         // Collect System and Unity assemblies
-        foreach (var asmPath in Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll"))
-            collector($"(System) {Path.GetFileName(asmPath)}", asmPath);
+        return
+            Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll").
+                Select(asmPath => ($"(System) {Path.GetFileName(asmPath)}", asmPath));
     }
 
-    internal static void CollectMods(Action<string, Assembly> collector)
+    internal static IEnumerable<(string, string, Assembly)> ModAssemblies()
     {
         foreach (var (mod, modAssembly) in GetModAssemblies())
         {
             var name = modAssembly.GetName().Name;
-            collector($"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
+            yield return (mod.Name, $"(mod {mod.PackageIdPlayerFacing}) {name}", modAssembly);
         }
     }
 

@@ -17,7 +17,7 @@ internal class TestPatches : TestBase
             testAsm.ModuleDefinition.GetType($"{nameof(Tests)}.{nameof(Injections)}")
         });
 
-        FreePatcher.RunPatches(new []{ liveTestAsm }, targetAsm);
+        FreePatcher.RunPatches(set, "TestAssemblyTarget");
         Reloader.Reload(set, WriteAssembly);
     }
 
@@ -104,5 +104,6 @@ internal class TestPatches : TestBase
     public void TestFreePatching()
     {
         Assert.That(new RewriteTarget().Method(), Is.EqualTo(1));
+        Assert.That(new RewriteTarget().Method2(), Is.EqualTo("b"));
     }
 }

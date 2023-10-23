@@ -6,6 +6,7 @@ namespace Prepatcher.Process;
 
 public class ModifiableAssembly
 {
+    public string OwnerName { get; }
     public string FriendlyName { get; }
 
     public Assembly? SourceAssembly { get; set; }
@@ -13,15 +14,18 @@ public class ModifiableAssembly
     public ModuleDefinition ModuleDefinition => AsmDefinition.MainModule;
 
     public bool ProcessAttributes { get; set; }
-    public bool NeedsReload { get; set; }
+    public bool NeedsReload => needsReload || Modified;
     public bool Modified { get; set; }
     public bool AllowPatches { get; set; } = true;
 
     public byte[]? Bytes { get; private set; }
     private byte[]? RawBytes { get; }
 
-    public ModifiableAssembly(string friendlyName, Assembly sourceAssembly, IAssemblyResolver resolver)
+    private bool needsReload;
+
+    public ModifiableAssembly(string ownerName, string friendlyName, Assembly sourceAssembly, IAssemblyResolver resolver)
     {
+        OwnerName = ownerName;
         FriendlyName = friendlyName;
         SourceAssembly = sourceAssembly;
 
@@ -34,8 +38,9 @@ public class ModifiableAssembly
             });
     }
 
-    public ModifiableAssembly(string friendlyName, string path, IAssemblyResolver resolver)
+    public ModifiableAssembly(string ownerName, string friendlyName, string path, IAssemblyResolver resolver)
     {
+        OwnerName = ownerName;
         FriendlyName = friendlyName;
         AsmDefinition = AssemblyDefinition.ReadAssembly(
             path,
@@ -62,6 +67,11 @@ public class ModifiableAssembly
     {
         Lg.Verbose($"Setting refonly: {FriendlyName}");
         UnsafeAssembly.SetReflectionOnly(SourceAssembly!, true);
+    }
+
+    public void SetNeedsReload()
+    {
+        needsReload = true;
     }
 
     public override string ToString()

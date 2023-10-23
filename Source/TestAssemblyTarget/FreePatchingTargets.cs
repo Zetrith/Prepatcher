@@ -6,4 +6,9 @@ public class RewriteTarget
     {
         return 0;
     }
+
+    public string Method2()
+    {
+        return "a";
+    }
 }

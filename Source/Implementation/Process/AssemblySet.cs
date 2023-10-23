@@ -17,13 +17,13 @@ public class AssemblySet
         Resolver = new AssemblyResolver(this);
     }
 
-    public ModifiableAssembly AddAssembly(string friendlyName, string? asmFilePath, Assembly? asm)
+    public ModifiableAssembly AddAssembly(string ownerName, string friendlyName, string? asmFilePath, Assembly? asm)
     {
         Lg.Verbose($"Adding assembly {friendlyName}");
 
         var masm = asmFilePath != null ?
-            new ModifiableAssembly(friendlyName, asmFilePath, Resolver) :
-            new ModifiableAssembly(friendlyName, asm!, Resolver);
+            new ModifiableAssembly(ownerName, friendlyName, asmFilePath, Resolver) :
+            new ModifiableAssembly(ownerName, friendlyName, asm!, Resolver);
 
         nameToAsm[masm.AsmDefinition.ShortName()] = masm;
         AllAssemblies.Add(masm);

@@ -70,7 +70,6 @@ internal partial class FieldAdder
         ceTargetType.Fields.Add(ceField);
 
         var targetAsm = set.FindAssembly(targetType)!;
-        targetAsm.NeedsReload = true;
         targetAsm.Modified = true;
 
         return ceField;
@@ -105,7 +104,6 @@ internal partial class FieldAdder
         il.Emit(OpCodes.Ret);
 
         var accessorAsm = set.FindAssembly(accessor.DeclaringType)!;
-        accessorAsm.NeedsReload = true;
         accessorAsm.Modified = true;
     }
 

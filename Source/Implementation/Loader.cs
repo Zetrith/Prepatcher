@@ -50,34 +50,34 @@ internal static class Loader
         origAsm = typeof(Game).Assembly;
 
         var set = new AssemblySet();
-        var modAsms = new List<Assembly>();
-        var asmCSharp =
-            set.AddAssembly(AssemblyCollector.AssemblyCSharp, null, typeof(Game).Assembly);
+        set.AddAssembly("RimWorld", AssemblyCollector.AssemblyCSharp, null, typeof(Game).Assembly);
 
-        AssemblyCollector.CollectSystem((friendlyName, path) =>
+        foreach (var (friendlyName, path) in AssemblyCollector.SystemAssemblyPaths())
         {
             if (AssemblyName.GetAssemblyName(path).Name == AssemblyCollector.AssemblyCSharp)
-                return;
+                continue;
 
-            var addedAsm = set.AddAssembly(friendlyName, path, null);
+            var addedAsm = set.AddAssembly("System", friendlyName, path, null);
             addedAsm.AllowPatches = false;
-        });
+        }
 
-        AssemblyCollector.CollectMods((friendlyName, asm) =>
+        foreach (var (modName, friendlyName, asm) in AssemblyCollector.ModAssemblies())
         {
             var name = asm.GetName().Name;
 
             // Don't add system assemblies packaged by mods
-            if (set.HasAssembly(name)) return;
+            if (set.HasAssembly(name)) continue;
 
-            var addedAsm = set.AddAssembly(friendlyName, null, asm);
-            addedAsm.ProcessAttributes = true;
+            var addedAsm = set.AddAssembly(modName, friendlyName, null, asm);
 
-            modAsms.Add(asm);
-        });
+            if (name.EndsWith("DataAssembly"))
+                addedAsm.AllowPatches = false;
+            else
+                addedAsm.ProcessAttributes = true;
+        }
 
         using (StopwatchScope.Measure("Game processing"))
-            GameProcessing.Process(set, asmCSharp, modAsms);
+            GameProcessing.Process(set);
 
         // Reload the assemblies
         Reloader.Reload(

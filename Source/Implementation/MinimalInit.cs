@@ -77,17 +77,17 @@ internal static class MinimalInit
             [AssemblyCollector.AssemblyCSharp] = AssemblyCollector.AssemblyCSharp
         };
 
-        AssemblyCollector.CollectSystem((friendlyName, path) =>
+        foreach (var (friendlyName, path) in AssemblyCollector.SystemAssemblyPaths())
         {
             friendlyAssemblyNames[AssemblyName.GetAssemblyName(path).Name] = friendlyName;
-        });
+        }
 
-        AssemblyCollector.CollectMods((friendlyName, asm) =>
+        foreach (var (_, friendlyName, asm) in AssemblyCollector.ModAssemblies())
         {
             // Don't add system assemblies packaged by mods
             if (friendlyAssemblyNames.TryAdd(asm.GetName().Name, friendlyName))
                 modAsms.Add(asm);
-        });
+        }
 
         static bool IgnoreRefonly(string id) =>
             id == PrepatcherMod.PrepatcherModId ||

@@ -41,6 +41,6 @@ internal static class Reloader
         var assemblyToDependants = set.AllAssembliesToDependants();
 
         foreach (var asm in Util.BFS(assembliesToReloadStart, asm => assemblyToDependants.GetValueSafe(asm) ?? Enumerable.Empty<ModifiableAssembly>()))
-            asm.NeedsReload = true;
+            asm.SetNeedsReload();
     }
 }
