@@ -92,6 +92,7 @@ internal static class Loader
                 HarmonyPatches.SetLoadingStage("Reloading game"); // Point where the mod manager can get opened
 
                 HarmonyPatches.PatchRootMethods();
+                Application.logMessageReceivedThreaded -= Log.Notify_MessageReceivedThreadedInternal;
                 UnregisterWorkshopCallbacks();
                 ClearAssemblyResolve();
             }

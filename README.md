@@ -13,11 +13,11 @@ The project has three main logical components:
 ## Installation
 
 ### Users
-Download the mod zip from [Releases](https://github.com/Zetrith/Prepatcher/releases) and unzip in RimWorld's Mods folder.
+- Download the mod by clicking *Code* > *Download ZIP* on this repo's main page
+- Unzip in RimWorld's Mods folder
+- Open the game and put Prepatcher first in the mod list. It has no dependencies on other mods.
 
-Clicking *Code* > *Download ZIP* on GitHub's main page won't work. Please use Releases.
-
-Put Prepatcher first in the mod list. It has no dependencies on other mods.
+The mod is currently no longer distributed through GitHub's Releases tab.
 
 Prepatcher is a provider of the Harmony library for RimWorld mods and can be used instead of [HarmonyRimWorld](https://github.com/pardeike/HarmonyRimWorld). It patches the mod loading system so that:
 
