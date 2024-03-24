@@ -28,7 +28,7 @@ public static class FreePatching
         var method = type.FindMethod(nameof(RewriteTarget.Method2));
 
         foreach (var inst in method.Body.Instructions)
-            if ((string)inst.Operand == "a")
+            if (inst.Operand is "a")
                 inst.Operand = "b";
 
         return true;

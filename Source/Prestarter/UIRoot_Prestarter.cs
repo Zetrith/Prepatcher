@@ -6,7 +6,6 @@ using Verse;
 
 namespace Prestarter;
 
-[HotSwappable]
 public class UIRoot_Prestarter : UIRoot
 {
     private ModManager manager;

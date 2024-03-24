@@ -21,17 +21,17 @@ public partial class ModManager
             TryDrawPreviewImage(data?.PreviewImage);
 
             using (MpStyle.Set(GameFont.Medium))
-                MpLayout.Label(data?.Name ?? "Name unknown");
+                Layouter.Label(data?.Name ?? "Name unknown");
 
             Layouter.BeginVertical(spacing: 0f, stretch: false);
             {
-                MpLayout.Label($"{"Id".Colorize(Color.gray)}: {selectedMod}");
-                MpLayout.Label($"{"Author".Colorize(Color.gray)}: {data?.AuthorsString ?? "Unknown"}");
+                Layouter.Label($"{"Id".Colorize(Color.gray)}: {selectedMod}");
+                Layouter.Label($"{"Author".Colorize(Color.gray)}: {data?.AuthorsString ?? "Unknown"}");
 
                 if (data is not { IsCoreMod: true })
                 {
                     var version = data != null ? VersionString(data) : "Unknown";
-                    MpLayout.Label($"{"Game versions".Colorize(Color.gray)}: {version}");
+                    Layouter.Label($"{"Game versions".Colorize(Color.gray)}: {version}");
                 }
             }
             Layouter.EndVertical();

@@ -9,7 +9,6 @@ namespace Prestarter;
 
 internal record ModListData(FileInfo File, ModList List, string Version);
 
-[HotSwappable]
 internal static class ModLists
 {
     internal static List<ModListData>? Lists
@@ -36,7 +35,8 @@ internal static class ModLists
                     ScribeMetaHeaderUtility.LoadGameDataHeader(
                         ScribeMetaHeaderUtility.ScribeHeaderMode.ModList,
                         logVersionConflictWarning: false);
-                    Scribe.loader.FinalizeLoading();
+                    if (Scribe.mode != LoadSaveMode.Inactive)
+                        Scribe.loader.FinalizeLoading();
                     if (GameDataSaveLoader.TryLoadModList(text, out var modList))
                         buildingList.Add(new ModListData(modListFile, modList, version));
                 }

@@ -6,11 +6,9 @@ using Verse;
 
 namespace Prestarter;
 
-[HotSwappable]
 public static class Layouter
 {
     #region Data
-    [HotSwappable]
     private class El
     {
         public El? nextTopLevel;
@@ -186,6 +184,18 @@ public static class Layouter
         PopGroup();
     }
 
+    public static void BeginHorizontalCenter()
+    {
+        BeginHorizontal();
+        FlexibleWidth();
+    }
+
+    public static void EndHorizontalCenter()
+    {
+        FlexibleWidth();
+        EndHorizontal();
+    }
+
     public static void BeginVertical(float spacing = 10f, bool stretch = true)
     {
         if (Event.current.type == EventType.Layout)
@@ -206,10 +216,12 @@ public static class Layouter
         var outRect = currentGroup!.rect;
         currentGroup.scroll = true;
 
+        var viewRect = new Rect(0, 0, outRect.width - currentGroup.paddingRight, currentGroup.childrenHeight);
+
         Widgets.BeginScrollView(
             outRect,
             ref scrollPos,
-            new Rect(0, 0, outRect.width - currentGroup.paddingRight, currentGroup.childrenHeight));
+            viewRect);
     }
 
     public static void EndScroll()
@@ -306,6 +318,18 @@ public static class Layouter
         return GetNextChild().rect;
     }
 
+    public static Rect FixedHeight(float height)
+    {
+        if (Event.current.type == EventType.Layout)
+        {
+            currentGroup!.children.Add(new El()
+                { rect = new Rect(0, 0, 0, height), widthMode = DimensionMode.Stretch, heightMode = DimensionMode.Fixed });
+            return DummyRect;
+        }
+
+        return GetNextChild().rect;
+    }
+
     public static Rect LastRect()
     {
         return
@@ -317,6 +341,18 @@ public static class Layouter
     public static Rect GroupRect()
     {
         return currentGroup!.rect;
+    }
+    #endregion
+
+    #region UI elements
+    public static void Label(string text, bool inheritHeight = false)
+    {
+        GUI.Label(inheritHeight ? FlexibleWidth() : ContentRect(text), text, Text.CurFontStyle);
+    }
+
+    public static bool Button(string text, float width, float height = 35f)
+    {
+        return Widgets.ButtonText(Rect(width, height), text);
     }
     #endregion
 

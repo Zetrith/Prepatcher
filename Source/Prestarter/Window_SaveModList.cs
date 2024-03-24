@@ -8,7 +8,6 @@ using Verse;
 
 namespace Prestarter;
 
-[HotSwappable]
 public class Window_SaveModList : Window
 {
     public override Vector2 InitialSize => new(700f, 600f);
@@ -41,7 +40,7 @@ public class Window_SaveModList : Window
             if (lists != null)
                 DrawModLists(lists);
             else
-                MpLayout.Label("Loading mod lists...");
+                Layouter.Label("Loading mod lists...");
         }
         Layouter.EndScroll();
         Layouter.EndHorizontal();
@@ -105,7 +104,7 @@ public class Window_SaveModList : Window
 
             // List name
             using (MpStyle.Set(TextAnchor.MiddleLeft))
-                MpLayout.Label(list.fileName, true);
+                Layouter.Label(list.fileName, true);
 
             // todo List actions
             // MpLayout.Button("Rename", 100, 30);
@@ -122,7 +121,7 @@ public class Window_SaveModList : Window
             }
 
             // List delete
-            if (Widgets.ButtonImage(Layouter.Rect(30, 30), TexButton.DeleteX, Color.white, GenUI.SubtleMouseoverColor))
+            if (Widgets.ButtonImage(Layouter.Rect(30, 30), TexButton.Delete, Color.white, GenUI.SubtleMouseoverColor))
             {
                 Find.WindowStack.Add(Dialog_MessageBox.CreateConfirmation("ConfirmDelete".Translate(list.fileName), delegate
                 {

@@ -63,6 +63,8 @@ internal static partial class HarmonyPatches
 
     private static void RecreateComponents()
     {
+        Lg.Verbose("Recreating comps");
+
         // It's important the components are iterated this way to make sure
         // they are recreated in the correct order.
         foreach (var comp in UnityEngine.Object.FindObjectsOfType<Component>())
@@ -76,6 +78,8 @@ internal static partial class HarmonyPatches
             {
                 comp.gameObject.AddComponent(translation);
                 UnityEngine.Object.Destroy(comp);
+
+                Lg.Verbose($"Recreated {comp} with new type {translation.FullName}");
             }
             catch (Exception e)
             {

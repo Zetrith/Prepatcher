@@ -9,7 +9,6 @@ using Verse;
 namespace Prestarter;
 
 // Based on the vanilla mod manager
-[HotSwappable]
 public partial class ModManager
 {
     private UniqueList<string> inactive;
@@ -131,24 +130,27 @@ public partial class ModManager
         Layouter.BeginArea(rect);
         Layouter.BeginHorizontal();
         {
-            if (MpLayout.Button("Load list", 100, 30))
+            if (Layouter.Button("Load list", 100, 30))
                 OpenModListLoader();
 
-            if (MpLayout.Button("Save list", 100, 30))
+            if (Layouter.Button("Save list", 100, 30))
                 Find.WindowStack.Add(new Window_SaveModList(this));
 
-            if (MpLayout.Button("Paste list", 100, 30))
+            if (Layouter.Button("Paste list", 100, 30))
                 Find.Root.StartCoroutine(PasteModsCoroutine(GUIUtility.systemCopyBuffer));
 
             TooltipHandler.TipRegion(Layouter.LastRect(), PasteDesc);
 
-            if (MpLayout.Button("Copy list", 100, 30))
+            if (Layouter.Button("Copy list", 100, 30))
                 CopyMods();
 
             TooltipHandler.TipRegion(Layouter.LastRect(), CopyDesc);
 
-            if (MpLayout.Button("Auto-sort", 100, 30))
+            if (Layouter.Button("Auto-sort", 100, 30))
                 TrySortMods();
+
+            // if (Layouter.Button("Steam info", 100, 30))
+            //     Find.WindowStack.Add(new SteamWindow(this));
 
             // var compactBox = autoSortBtn with { x = autoSortBtn.x + 120, width = 90 };
             // Widgets.CheckboxLabeled(compactBox, "Compact", ref compact);
@@ -179,15 +181,15 @@ public partial class ModManager
         }
         Layouter.EndHorizontal();
 
-        MpLayout.BeginHorizCenter();
+        Layouter.BeginHorizontalCenter();
         {
-            if (MpLayout.Button("Launch", 100, 30))
+            if (Layouter.Button("Launch", 100, 30))
                 Launch();
 
             if (KeyBindingDefOf.Accept.KeyDownEvent)
                 Launch();
         }
-        MpLayout.EndHorizCenter();
+        Layouter.EndHorizontalCenter();
         Layouter.EndArea();
 
         HandleDrag();
