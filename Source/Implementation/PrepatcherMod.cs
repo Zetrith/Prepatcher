@@ -7,8 +7,6 @@ namespace Prepatcher;
 
 internal class PrepatcherMod : Mod
 {
-    public static Settings settings;
-
     private const string CmdArgVerbose = "verbose";
 
     internal const string PrepatcherModId = "zetrith.prepatcher";
@@ -17,7 +15,6 @@ internal class PrepatcherMod : Mod
     public PrepatcherMod(ModContentPack content) : base(content)
     {
         InitLg();
-        settings = GetSettings<Settings>();
 
         HarmonyPatches.PatchModLoading();
         HarmonyPatches.AddVerboseProfiling();
@@ -58,11 +55,6 @@ internal class PrepatcherMod : Mod
 
         if (GenCommandLine.CommandLineArgPassed(CmdArgVerbose))
             Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
-    }
-
-    public override void DoSettingsWindowContents(Rect inRect)
-    {
-        settings.DoSettingsWindow(inRect);
     }
 
     public override string SettingsCategory()
