@@ -14,7 +14,7 @@
   </loadBefore>
   <description>Prepatcher is a powerful library for mod developers and a mod manager.
   
-Includes Harmony v2.3.1.1 and PrepatcherAPI v1.2.0
+Includes Harmony v2.3.3 and PrepatcherAPI v1.2.0
 
 The version for RimWorld 1.4 includes Harmony v2.2.2 and PrepatcherAPI v1.2.0
 </description>
