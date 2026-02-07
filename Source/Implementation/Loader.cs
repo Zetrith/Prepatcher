@@ -103,7 +103,16 @@ internal static class Loader
     {
         Lg.Verbose($"Loading assembly: {asm}");
 
-        var loadedAssembly = Assembly.Load(asm.Bytes);
+        Assembly loadedAssembly;
+        if (asm.SymbolsLoaded)
+        {
+            Lg.Verbose($"Loading assembly with symbols: {asm}: ");
+            loadedAssembly = Assembly.Load(asm.Bytes, asm.SymbolBytes);
+        }
+        else
+        {
+            loadedAssembly = Assembly.Load(asm.Bytes);
+        }
         if (loadedAssembly.GetName().Name == AssemblyCollector.AssemblyCSharp)
         {
             newAsm = loadedAssembly;

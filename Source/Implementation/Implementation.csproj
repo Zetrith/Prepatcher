@@ -10,11 +10,9 @@
         <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
         <RootNamespace>Prepatcher</RootNamespace>
         <AssemblyName>PrepatcherImpl</AssemblyName>
+        <DebugType>embedded</DebugType>
     </PropertyGroup>
 
-    <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-      <DebugType>none</DebugType>
-    </PropertyGroup>
 
   <ItemGroup>
 
