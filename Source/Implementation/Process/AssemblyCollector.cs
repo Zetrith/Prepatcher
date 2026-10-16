@@ -15,8 +15,31 @@ internal static class AssemblyCollector
     {
         // Collect System and Unity assemblies
         return
-            Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll").
+            Directory.GetFiles(SystemAssemblyFolder(), "*.dll").
                 Select(asmPath => ($"(System) {Path.GetFileName(asmPath)}", asmPath));
+    }
+
+    // RimWorld 1.7 ships its assemblies flat in the game root rather than in a Unity Managed folder
+    private static string SystemAssemblyFolder()
+    {
+        var gameAsmPath = typeof(Game).Assembly.Location;
+        if (!string.IsNullOrEmpty(gameAsmPath) && File.Exists(gameAsmPath))
+            return Path.GetDirectoryName(gameAsmPath)!;
+
+        return Path.Combine(Application.dataPath, Util.ManagedFolderOS());
+    }
+
+    // Returns null when the file isn't a managed assembly
+    internal static string? TryGetAssemblyName(string path)
+    {
+        try
+        {
+            return AssemblyName.GetAssemblyName(path).Name;
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
     }
 
     internal static IEnumerable<(string, string, Assembly)> ModAssemblies()

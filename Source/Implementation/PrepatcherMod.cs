@@ -45,7 +45,18 @@ internal class PrepatcherMod : Mod
         // Thread abortion counts as a crash
         Prefs.data.resetModsConfigOnCrash = false;
 
-        Thread.CurrentThread.Abort();
+        if (UnsafeAssembly.IsMonoRuntime)
+        {
+            Thread.CurrentThread.Abort();
+        }
+        else
+        {
+            // Thread.Abort() isn't supported on CoreCLR. The vanilla load must not continue
+            // either way, so park this thread instead; the patched assemblies take over from
+            // Root.Update on the main thread.
+            Lg.Info("Parking the vanilla loading thread");
+            Thread.Sleep(Timeout.Infinite);
+        }
     }
 
     private static void InitLg()
@@ -53,8 +64,8 @@ internal class PrepatcherMod : Mod
         Lg._infoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg._errorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
-        if (GenCommandLine.CommandLineArgPassed(CmdArgVerbose))
-            Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
+        // TODO port bring-up: always verbose, revert to the command line arg once stable
+        Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
     }
 
     public override string SettingsCategory()

@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using HarmonyLib;
 using LudeonTK;
 using Prepatcher.Process;
@@ -54,7 +55,8 @@ internal static class Loader
 
         foreach (var (friendlyName, path) in AssemblyCollector.SystemAssemblyPaths())
         {
-            if (AssemblyName.GetAssemblyName(path).Name == AssemblyCollector.AssemblyCSharp)
+            var systemAsmName = AssemblyCollector.TryGetAssemblyName(path);
+            if (systemAsmName == null || systemAsmName == AssemblyCollector.AssemblyCSharp)
                 continue;
 
             var addedAsm = set.AddAssembly("System", friendlyName, path, null);
@@ -95,6 +97,7 @@ internal static class Loader
                 Application.logMessageReceivedThreaded -= Log.Notify_MessageReceivedThreadedInternal;
                 UnregisterWorkshopCallbacks();
                 ClearAssemblyResolve();
+                ClearPendingDeferredMaterials();
             }
         );
     }
@@ -137,17 +140,59 @@ internal static class Loader
         Workshop.installedCallback?.Unregister();
     }
 
+    // RimWorld 1.7 defers material resolution until defs are loaded and queues the pending
+    // ones in a static list in UnityStubs, which is shared rather than reloaded. Materials
+    // queued by the vanilla load we just stopped would outlive it and then fail to resolve
+    // against the patched assembly's defs, so drop them before the restart.
+    private static void ClearPendingDeferredMaterials()
+    {
+        var pendingField = AccessTools.Field(typeof(Material), "PendingDeferredMaterials");
+        if (pendingField?.GetValue(null) is not IList pending)
+            return;
+
+        var resolveLock = AccessTools.Field(typeof(Material), "DeferredResolveLock")?.GetValue(null);
+        if (resolveLock == null)
+            return;
+
+        lock (resolveLock)
+        {
+            Lg.Verbose($"Dropping {pending.Count} deferred materials from the stopped load");
+            pending.Clear();
+        }
+    }
+
     private static void ClearAssemblyResolve()
     {
         Lg.Verbose("Clearing AppDomain.AssemblyResolve");
 
+        // Mono names the backing field after the event itself, CoreCLR prefixes it with an underscore
+        // Mono keeps the handlers on AppDomain itself. On CoreCLR AppDomain.AssemblyResolve
+        // is just a forwarder to a static field on AssemblyLoadContext, and the only
+        // ResolveEventHandler field left on AppDomain is ReflectionOnlyAssemblyResolve.
         var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
-        var del = (Delegate)asmResolve.GetValue(AppDomain.CurrentDomain);
+        object? resolveTarget = AppDomain.CurrentDomain;
+
+        if (asmResolve == null)
+        {
+            asmResolve = AccessTools.Field(typeof(AssemblyLoadContext), "AssemblyResolve");
+            resolveTarget = null;
+        }
+
+        if (asmResolve == null)
+        {
+            Lg.Error("Couldn't find the AssemblyResolve backing field");
+            return;
+        }
+
+        Lg.Verbose($"AssemblyResolve backing field: {asmResolve.DeclaringType!.Name}.{asmResolve.Name}");
+        var del = (Delegate?)asmResolve.GetValue(resolveTarget);
+        if (del == null)
+            return;
 
         // Handle MonoMod's internal dynamic assemblies
         foreach (var d in del.GetInvocationList().ToList())
         {
-            if (d!.Method.DeclaringType!.Namespace!.StartsWith("MonoMod.Utils"))
+            if (d!.Method.DeclaringType?.Namespace?.StartsWith("MonoMod.Utils") == true)
             {
                 foreach (var f in AccessTools.GetDeclaredFields(d.Method.DeclaringType))
                 {
@@ -160,6 +205,6 @@ internal static class Loader
             }
         }
 
-        asmResolve.SetValue(AppDomain.CurrentDomain, null);
+        asmResolve.SetValue(resolveTarget, null);
     }
 }
