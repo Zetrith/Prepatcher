@@ -19,7 +19,7 @@ internal static class AssemblyCollector
                 Select(asmPath => ($"(System) {Path.GetFileName(asmPath)}", asmPath));
     }
 
-    // RimWorld 1.7 ships its assemblies flat in the game root rather than in a Unity Managed folder
+    // 1.7 keeps its assemblies in the game root instead of a Managed folder
     private static string SystemAssemblyFolder()
     {
         var gameAsmPath = typeof(Game).Assembly.Location;

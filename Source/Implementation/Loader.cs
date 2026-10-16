@@ -115,13 +115,12 @@ internal static class Loader
 
         if (SharedAssemblies.Contains(asmName))
         {
-            // Harmony and MonoMod keep process-global patching state and hand out generic
-            // types to everything that patches. A second copy inside the patched context
-            // would not match the first, so share the original instead of reloading it.
+            // Harmony holds global patch state and hands generic types to everything that
+            // patches, so a second copy breaks MonoMod. It never references Assembly-CSharp
+            // and so doesn't need rebinding anyway.
             loadedAssembly = AppDomain.CurrentDomain.GetAssemblies().
                 First(a => a.GetName().Name == asmName);
             PatchedAssemblyLoadContext.Instance.Share(asmName, loadedAssembly);
-            Lg.Verbose($"Sharing {asmName} with the patched context instead of reloading it");
         }
         else
         {
@@ -162,10 +161,9 @@ internal static class Loader
         Workshop.installedCallback?.Unregister();
     }
 
-    // RimWorld 1.7 defers material resolution until defs are loaded and queues the pending
-    // ones in a static list in UnityStubs, which is shared rather than reloaded. Materials
-    // queued by the vanilla load we just stopped would outlive it and then fail to resolve
-    // against the patched assembly's defs, so drop them before the restart.
+    // 1.7 holds materials in a static queue until defs load. That queue lives in UnityStubs,
+    // which isn't reloaded, so anything queued by the load we just stopped would survive into
+    // the restart and fail to resolve against the patched defs.
     private static void ClearPendingDeferredMaterials()
     {
         var pendingField = AccessTools.Field(typeof(Material), "PendingDeferredMaterials");
@@ -177,20 +175,15 @@ internal static class Loader
             return;
 
         lock (resolveLock)
-        {
-            Lg.Verbose($"Dropping {pending.Count} deferred materials from the stopped load");
             pending.Clear();
-        }
     }
 
     private static void ClearAssemblyResolve()
     {
         Lg.Verbose("Clearing AppDomain.AssemblyResolve");
 
-        // Mono names the backing field after the event itself, CoreCLR prefixes it with an underscore
-        // Mono keeps the handlers on AppDomain itself. On CoreCLR AppDomain.AssemblyResolve
-        // is just a forwarder to a static field on AssemblyLoadContext, and the only
-        // ResolveEventHandler field left on AppDomain is ReflectionOnlyAssemblyResolve.
+        // Mono keeps the handlers on AppDomain. Off Mono it only forwards to a static field
+        // on AssemblyLoadContext, and the one left on AppDomain is the reflection-only pair.
         var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
         object? resolveTarget = AppDomain.CurrentDomain;
 
@@ -206,7 +199,6 @@ internal static class Loader
             return;
         }
 
-        Lg.Verbose($"AssemblyResolve backing field: {asmResolve.DeclaringType!.Name}.{asmResolve.Name}");
         var del = (Delegate?)asmResolve.GetValue(resolveTarget);
         if (del == null)
             return;

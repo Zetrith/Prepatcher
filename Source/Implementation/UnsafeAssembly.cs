@@ -12,7 +12,6 @@ internal class UnsafeAssembly
 {
     private static readonly FieldInfo? MonoAssemblyField = AccessTools.Field(AccessTools.TypeByName("System.Reflection.RuntimeAssembly"), "_mono_assembly");
 
-    // RimWorld 1.7 runs on WaylithCLR (CoreCLR), earlier versions on Unity's Mono
     internal static bool IsMonoRuntime => MonoAssemblyField != null;
 
     private static List<Assembly> refOnly = new();
@@ -60,32 +59,30 @@ internal class UnsafeAssembly
         return arr;
     }
 
-    // RimWorld 1.7 runs on WaylithCLR instead of Unity's Mono, so the loaded image
-    // can't be read out of the runtime's internals. Recover the bytes from disk instead.
+    // No MonoImage to read the loaded bytes out of, so go back to the file
     private static byte[] GetRawDataFromDisk(Assembly asm)
     {
         var path = FindAssemblyFile(asm);
         if (path == null)
             throw new Exception($"Couldn't find a file on disk for assembly {asm.GetName().Name}");
 
-        Lg.Verbose($"Reading raw data from disk: {path}");
         return File.ReadAllBytes(path);
     }
 
     private static string? FindAssemblyFile(Assembly asm)
     {
-        // Assemblies loaded from a file (the game's own) report their location directly
+        // The game's own assemblies are loaded from a file and report where
         if (!string.IsNullOrEmpty(asm.Location) && File.Exists(asm.Location))
             return asm.Location;
 
-        // Mod assemblies are loaded from a byte array, so find the file the owning mod loaded
+        // Mod assemblies come from a byte array, so go looking for the file
         var name = asm.GetName().Name;
         var mod = LoadedModManager.RunningModsListForReading.
             FirstOrDefault(m => m.assemblies.loadedAssemblies.Contains(asm));
         if (mod == null)
             return null;
 
-        // Same folder precedence the game itself uses to pick a versioned Assemblies folder
+        // Same precedence the game uses when picking a versioned folder
         foreach (var folder in mod.foldersToLoadDescendingOrder)
         {
             var candidate = Path.Combine(folder, "Assemblies", name + ".dll");

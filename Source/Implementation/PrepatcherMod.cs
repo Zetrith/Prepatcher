@@ -51,10 +51,8 @@ internal class PrepatcherMod : Mod
         }
         else
         {
-            // Thread.Abort() isn't supported on CoreCLR. The vanilla load must not continue
-            // either way, so park this thread instead; the patched assemblies take over from
-            // Root.Update on the main thread.
-            Lg.Info("Parking the vanilla loading thread");
+            // No Thread.Abort off Mono. The vanilla load still has to stop, and the patched
+            // assemblies take over from Root.Update on the main thread, so just park it here.
             Thread.Sleep(Timeout.Infinite);
         }
     }

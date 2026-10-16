@@ -10,9 +10,8 @@ public static class DataStore
 {
     public static bool startedOnce;
 
-    // Patched assemblies by simple name. On Mono the originals are marked reflection-only
-    // and so drop out of AppDomain.GetAssemblies(); CoreCLR has no such concept, so the
-    // superseded copies stay visible and have to be filtered out by identity instead.
+    // Patched assemblies by name. Mono drops the reflection-only originals out of
+    // AppDomain.GetAssemblies(); off Mono they stay visible and have to be skipped by hand.
     public static readonly Dictionary<string, Assembly> PatchedAssemblies = new();
 
     public static volatile bool openModManager;
