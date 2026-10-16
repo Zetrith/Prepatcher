@@ -8,4 +8,5 @@ rm -f Assemblies/0Harmony.dll Assemblies/*.deps.json   # Harmony comes from the 
 mkdir -p "$M/Assemblies" "$M/About"
 cp Assemblies/*.dll "$M/Assemblies/"
 cp About/About.xml "$M/About/"
+cp LICENSE "$M/LICENSE"
 echo "installed to $M"

@@ -5,7 +5,7 @@
   <supportedVersions>
     <li>1.7</li>
   </supportedVersions>
-  <author>Zetrith</author>
+  <author>Zetrith, 1.7 port by Ren</author>
   <url>https://github.com/Zetrith/Prepatcher</url>
   <modDependencies>
     <li>
@@ -21,6 +21,8 @@
     <li>Ludeon.RimWorld</li>
   </loadBefore>
   <description>Zetrith's Prepatcher, patched up to run on 1.7.
+
+Unsubscribe from the original Prepatcher before using this. Both use the same mod id, so having both will throw duplicate mod errors.
 
 1.7 moved off Unity and Mono onto a new runtime, and Prepatcher leaned on a few things that went away with it: reading an assembly's bytes straight out of the runtime, the old Managed folder, the AppDomain.AssemblyResolve field, and Thread.Abort. Those all have replacements now. The bigger one was reflection-only assemblies, which don't exist off Mono and were what kept the old assemblies from getting in the way, so the patched ones load into their own AssemblyLoadContext instead.
 
