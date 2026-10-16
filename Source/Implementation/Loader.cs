@@ -1,8 +1,10 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
+using DataAssembly;
 using HarmonyLib;
 using LudeonTK;
 using Prepatcher.Process;
@@ -102,11 +104,31 @@ internal static class Loader
         );
     }
 
+    private static readonly HashSet<string> SharedAssemblies = new() { "0Harmony" };
+
     private static void LoadAssembly(ModifiableAssembly asm)
     {
         Lg.Verbose($"Loading assembly: {asm}");
 
-        var loadedAssembly = Assembly.Load(asm.Bytes);
+        var asmName = asm.AsmDefinition.Name.Name;
+        Assembly loadedAssembly;
+
+        if (SharedAssemblies.Contains(asmName))
+        {
+            // Harmony and MonoMod keep process-global patching state and hand out generic
+            // types to everything that patches. A second copy inside the patched context
+            // would not match the first, so share the original instead of reloading it.
+            loadedAssembly = AppDomain.CurrentDomain.GetAssemblies().
+                First(a => a.GetName().Name == asmName);
+            PatchedAssemblyLoadContext.Instance.Share(asmName, loadedAssembly);
+            Lg.Verbose($"Sharing {asmName} with the patched context instead of reloading it");
+        }
+        else
+        {
+            loadedAssembly = PatchedAssemblyLoadContext.Instance.LoadPatched(asm.Bytes!);
+        }
+        DataStore.PatchedAssemblies[loadedAssembly.GetName().Name!] = loadedAssembly;
+
         if (loadedAssembly.GetName().Name == AssemblyCollector.AssemblyCSharp)
         {
             newAsm = loadedAssembly;

@@ -64,8 +64,8 @@ internal class PrepatcherMod : Mod
         Lg._infoFunc = msg => Log.Message($"Prepatcher: {msg}");
         Lg._errorFunc = msg => Log.Error($"Prepatcher Error: {msg}");
 
-        // TODO port bring-up: always verbose, revert to the command line arg once stable
-        Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
+        if (GenCommandLine.CommandLineArgPassed(CmdArgVerbose))
+            Lg._verboseFunc = msg => Log.Message($"Prepatcher Verbose: {msg}");
     }
 
     public override string SettingsCategory()
