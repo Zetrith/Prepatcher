@@ -7,7 +7,7 @@ namespace Prepatcher;
 
 public static class WorldCameraFreePatch
 {
-    [FreePatch]
+    // [FreePatch]  // disabled: on-disk assembly must not reference PrepatcherImpl
     static void ReplaceAddComponent(ModuleDefinition module)
     {
         var type = module.GetType($"RimWorld.Planet.{nameof(WorldCameraManager)}");

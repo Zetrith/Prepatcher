@@ -11,7 +11,7 @@ namespace Prepatcher;
 
 public static class AssemblyLoadingFreePatch
 {
-    [FreePatch]
+    // [FreePatch]  // disabled: on-disk assembly must not reference PrepatcherImpl
     static void ReplaceAssemblyLoading(ModuleDefinition module)
     {
         var type = module.GetType($"{nameof(Verse)}.{nameof(ModAssemblyHandler)}");
@@ -20,6 +20,20 @@ public static class AssemblyLoadingFreePatch
         foreach (var inst in method.Body.Instructions)
             if (inst.Operand is MethodReference { Name: nameof(Assembly.LoadFrom) })
                 inst.Operand = module.ImportReference(typeof(AssemblyLoadingFreePatch).GetMethod(nameof(LoadFrom)));
+    }
+
+    private static bool ReferencesGameAssembly(byte[] rawAssembly)
+    {
+        try
+        {
+            using var stream = new MemoryStream(rawAssembly);
+            using var def = AssemblyDefinition.ReadAssembly(stream);
+            return def.MainModule.AssemblyReferences.Any(r => r.Name == "Assembly-CSharp");
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     public static Assembly LoadFrom(string filePath)
@@ -34,10 +48,23 @@ public static class AssemblyLoadingFreePatch
         var asmWithName = AppDomain.CurrentDomain.GetAssemblies()
             .FirstOrDefault(a => a.GetName().Name == asmName.Name);
 
+        var rawAssembly = File.ReadAllBytes(filePath);
+
+        // Not in the patched set. Handing back an already loaded copy would leave it bound to
+        // the original Assembly-CSharp, and its types then don't match the ones the patched
+        // game is running. Anything referencing the game assembly goes into the patched
+        // context instead. Assemblies that don't touch it can be shared as they are.
+        if (ReferencesGameAssembly(rawAssembly))
+        {
+            Lg.Verbose($"Loading {asmName.Name} into the patched context");
+            var intoContext = PatchedAssemblyLoadContext.Instance.LoadPatched(rawAssembly);
+            DataStore.PatchedAssemblies[asmName.Name!] = intoContext;
+            return intoContext;
+        }
+
         if (asmWithName != null)
             return asmWithName;
 
-        var rawAssembly = File.ReadAllBytes(filePath);
         var fileInfo = new FileInfo(Path.Combine(Path.GetDirectoryName(filePath)!, Path.GetFileNameWithoutExtension(filePath)) + ".pdb");
         if (fileInfo.Exists)
         {

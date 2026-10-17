@@ -80,6 +80,8 @@ internal static class Loader
                 addedAsm.ProcessAttributes = true;
         }
 
+        Lg.Info($"Assembly set: {set.AllAssemblies.Count} total, CozyRainMod present: {set.HasAssembly("CozyRainMod")}, LunarFramework present: {set.HasAssembly("LunarFramework")}");
+
         using (StopwatchScope.Measure("Game processing"))
             GameProcessing.Process(set);
 
@@ -99,7 +101,7 @@ internal static class Loader
                 Application.logMessageReceivedThreaded -= Log.Notify_MessageReceivedThreadedInternal;
                 UnregisterWorkshopCallbacks();
                 ClearAssemblyResolve();
-                ClearPendingDeferredMaterials();
+                // ClearPendingDeferredMaterials();   // testing: does dropping these blank the map?
             }
         );
     }
@@ -132,6 +134,22 @@ internal static class Loader
         {
             newAsm = loadedAssembly;
             AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
+        }
+
+        // Always keep a copy of what we produced, so it can be tried on disk instead of
+        // being loaded alongside the original.
+        if (asm.Modified && asm.Bytes != null)
+        {
+            try
+            {
+                var cache = Path.Combine(GenFilePaths.ConfigFolderPath, "PrepatcherDump");
+                Directory.CreateDirectory(cache);
+                File.WriteAllBytes(Path.Combine(cache, asm.AsmDefinition.Name.Name + ".dll"), asm.Bytes);
+            }
+            catch (Exception e)
+            {
+                Lg.Error($"Couldn't dump {asm.AsmDefinition.Name.Name}: {e.Message}");
+            }
         }
 
         if (GenCommandLine.TryGetCommandLineArg("dumpasms", out var path) && !path.Trim().NullOrEmpty())

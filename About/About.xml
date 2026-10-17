@@ -20,15 +20,13 @@
   <loadBefore>
     <li>Ludeon.RimWorld</li>
   </loadBefore>
-  <description>Zetrith's Prepatcher, patched up to run on 1.7.
+  <description>Prepatcher updated for 1.7. All Zetrith's work, I just fixed what the new runtime broke.
 
-Unsubscribe from the original Prepatcher before using this. Both use the same mod id, so having both will throw duplicate mod errors.
+Unsubscribe the original first. They share a mod id and you'll get errors with both.
 
-1.7 moved off Unity and Mono onto a new runtime, and Prepatcher leaned on a few things that went away with it: reading an assembly's bytes straight out of the runtime, the old Managed folder, the AppDomain.AssemblyResolve field, and Thread.Abort. Those all have replacements now. The bigger one was reflection-only assemblies, which don't exist off Mono and were what kept the old assemblies from getting in the way, so the patched ones load into their own AssemblyLoadContext instead.
+Harmony isn't bundled anymore. Subscribe to Harmony and let it load above this.
 
-Harmony is no longer bundled. 1.7 wants Harmony 3.0 and the Harmony mod ships it, whereas the copy in here was 2.4.2 and quietly downgraded everyone else's. Subscribe to Harmony and let it load first.
+Haven't tested it on a big modlist yet. Report anything broken here, not to Zetrith.
 
-All of this is Zetrith's work, I only fixed what 1.7 broke. If he'd rather this wasn't up, or puts out his own 1.7 build, say the word and I'll take it down.
-
-Tested with the usual frameworks rather than a full load order, so expect rough edges. Please report anything broken here and not to Zetrith, it's not his doing.</description>
+If he wants it down, or puts out his own 1.7 build, just say so and I'll remove it.</description>
 </ModMetaData>

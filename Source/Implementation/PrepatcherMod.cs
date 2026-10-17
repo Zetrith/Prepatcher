@@ -1,5 +1,7 @@
-﻿using System.Threading;
+﻿using System.IO;
+using System.Threading;
 using DataAssembly;
+using HarmonyLib;
 using UnityEngine;
 using Verse;
 
@@ -22,6 +24,18 @@ internal class PrepatcherMod : Mod
 
         HarmonyPatches.SetLoadingStage("Initializing Prepatcher");
 
+        // The game assembly on disk is already the patched one, so there's nothing to rewrite
+        // and nothing to reload. Everything runs in a single assembly as the engine expects.
+        if (File.Exists(Path.Combine(GenFilePaths.ConfigFolderPath, "PrepatcherDump", "USE_ONDISK")))
+        {
+            Lg.Info("Patched game assembly is already on disk, skipping the reload");
+
+            // Still needed: a mod whose patch Harmony 3 rejects would otherwise take down
+            // everything else patching the same method, and its own static constructor with it.
+            PatchFailureTolerancePatch.Apply(new Harmony("prepatcher.tolerance"));
+            return;
+        }
+
         if (DataStore.startedOnce)
         {
             AppDomain.CurrentDomain.ReflectionOnlyAssemblyResolve += (sender, args) =>
@@ -29,6 +43,9 @@ internal class PrepatcherMod : Mod
                 Lg.Verbose($"ReflectionOnlyAssemblyResolve: {args.RequestingAssembly} requested {args.Name}");
                 return null;
             };
+
+            // Runs before the other mods' classes are created, so their lookups are covered
+            TypeByNamePatch.Apply();
 
             Lg.Info($"Restarted with the patched assembly, going silent.");
             return;
