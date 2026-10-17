@@ -9,12 +9,10 @@ using Verse;
 
 namespace Prepatcher;
 
-// The game assembly can't be rewritten in place once it's loaded, and loading a second copy
-// alongside it doesn't work on 1.7: the engine reads the map and camera out of Assembly-CSharp
-// and binds to the original before any mod runs, so it keeps drawing the world we replaced.
-//
-// Writing the rewritten assembly to disk and restarting avoids all of that. The game loads one
-// assembly that already has the fields in it, and nothing has to be hidden or redirected.
+// A loaded assembly can't be rewritten in place, and loading a patched copy alongside it
+// doesn't work on 1.7: the engine reads the map and camera out of Assembly-CSharp and binds to
+// the original before any mod runs, so it carries on drawing the world we replaced. Writing the
+// assembly out and restarting sidesteps that. One assembly, with the fields already in it.
 internal static class OnDisk
 {
     private const string CacheFolder = "PrepatcherCache";
@@ -67,9 +65,9 @@ internal static class OnDisk
         return File.Exists(stamp) && File.ReadAllText(stamp) == CurrentStamp();
     }
 
-    // Set before restarting and cleared once the patched assembly has started. Finding it still
-    // there means the patched assembly didn't get that far, so the stock one goes back.
-    internal static bool RestartFailed => File.Exists(Path.Combine(CachePath, PendingFile));
+    // Written when we install and cleared on the next start. It only tells us an install
+    // happened; reaching Prepatcher at all means the assemblies themselves loaded fine.
+    internal static bool InstallPending => File.Exists(Path.Combine(CachePath, PendingFile));
 
     internal static void MarkStarted()
     {
@@ -145,7 +143,6 @@ internal static class OnDisk
         return null;
     }
 
-    // Put everything back the way it was
     internal static void Restore()
     {
         RestoreOne(GameAssemblyPath);
