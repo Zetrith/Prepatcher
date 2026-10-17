@@ -5,9 +5,6 @@ using UnityEngine;
 
 namespace Prepatcher;
 
-// Only needed for the in-process reload: AddComponent resolves WorldCameraDriver by
-// name and picks up the old assembly. An on-disk assembly must not call back into
-// PrepatcherImpl, which isn't loaded yet when mod content loads.
 public static class WorldCameraFreePatch
 {
     static void ReplaceAddComponent(ModuleDefinition module)

@@ -29,8 +29,6 @@ internal static partial class HarmonyPatches
 
     private static void InitVersionedDataPostfix(ModMetaData.ModMetaDataInternal __instance)
     {
-        // Prepatcher loads after Harmony itself now that it no longer carries its own copy,
-        // and adding the rule to Prepatcher would make it depend on itself.
         if (__instance.packageId?.ToLowerInvariant() == PrepatcherMod.PrepatcherModId)
             return;
 

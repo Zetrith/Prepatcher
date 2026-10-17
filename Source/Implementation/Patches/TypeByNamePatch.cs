@@ -8,17 +8,12 @@ using Verse;
 
 namespace Prepatcher;
 
-// A by-name lookup returns whichever copy loaded first, which is the superseded original, so
-// the mod patches a method on that while its own parameter types resolve to the patched
-// assembly and Harmony won't bind the two. Mono drops the originals out of the search because
-// they're reflection-only; nothing hides a loaded assembly off Mono, so redirect the result.
 internal static class TypeByNamePatch
 {
     internal static void Apply()
     {
         var harmony = new Harmony("prepatcher.typebyname");
 
-        // One mod's broken patch shouldn't stop every other patch on the same method
         PatchFailureTolerancePatch.Apply(harmony);
 
         var target = AccessTools.Method(typeof(AccessTools), nameof(AccessTools.TypeByName));
@@ -31,7 +26,6 @@ internal static class TypeByNamePatch
         harmony.Patch(target, postfix: new HarmonyMethod(typeof(TypeByNamePatch), nameof(RedirectToPatched)));
         Lg.Verbose("Redirecting AccessTools.TypeByName to the patched assemblies");
 
-        // Class names out of XML resolve the same way and land on the same problem
         var assemblies = AccessTools.PropertyGetter(typeof(GenTypes), nameof(GenTypes.AllActiveAssemblies));
         if (assemblies == null)
         {
@@ -42,7 +36,6 @@ internal static class TypeByNamePatch
         harmony.Patch(assemblies, postfix: new HarmonyMethod(typeof(TypeByNamePatch), nameof(DropSuperseded)));
         Lg.Verbose("Filtering superseded assemblies out of GenTypes");
 
-        // These search their own cache rather than the list above, so fix up the result
         foreach (var lookup in new[] { nameof(GenTypes.GetTypeInAnyAssembly), "GetTypeInAnyAssemblyInt", "GetTypeInAnyAssemblyRaw" })
         {
             var method = AccessTools.Method(typeof(GenTypes), lookup);
@@ -56,7 +49,6 @@ internal static class TypeByNamePatch
             Lg.Verbose($"Redirecting GenTypes.{lookup} to the patched assemblies");
         }
 
-        // Anything already resolved was found before the redirects went on
         GenTypes.ClearCache();
 
     }

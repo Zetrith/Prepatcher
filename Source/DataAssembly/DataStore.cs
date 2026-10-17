@@ -10,8 +10,6 @@ public static class DataStore
 {
     public static bool startedOnce;
 
-    // Patched assemblies by name. Mono drops the reflection-only originals out of
-    // AppDomain.GetAssemblies(); off Mono they stay visible and have to be skipped by hand.
     public static readonly Dictionary<string, Assembly> PatchedAssemblies = new();
 
     public static volatile bool openModManager;

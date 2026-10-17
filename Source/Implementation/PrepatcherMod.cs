@@ -24,8 +24,6 @@ internal class PrepatcherMod : Mod
 
         HarmonyPatches.SetLoadingStage("Initializing Prepatcher");
 
-        // Getting here at all means the patched assemblies loaded, so there's nothing to do
-        // beyond the Harmony fix below.
         if (OnDisk.UpToDate())
         {
             OnDisk.MarkStarted();
@@ -34,8 +32,6 @@ internal class PrepatcherMod : Mod
             return;
         }
 
-        // We installed, and came back to a game that doesn't match what we built for it.
-        // Put the originals back rather than leave a mismatched pair in place.
         if (OnDisk.InstallPending)
         {
             Lg.Error("The patched assemblies don't match this game, restoring the originals");

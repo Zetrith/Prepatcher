@@ -59,7 +59,6 @@ internal class UnsafeAssembly
         return arr;
     }
 
-    // No MonoImage to read the loaded bytes out of, so go back to the file
     private static byte[] GetRawDataFromDisk(Assembly asm)
     {
         var path = FindAssemblyFile(asm);
@@ -71,18 +70,15 @@ internal class UnsafeAssembly
 
     private static string? FindAssemblyFile(Assembly asm)
     {
-        // The game's own assemblies are loaded from a file and report where
         if (!string.IsNullOrEmpty(asm.Location) && File.Exists(asm.Location))
             return asm.Location;
 
-        // Mod assemblies come from a byte array, so go looking for the file
         var name = asm.GetName().Name;
         var mod = LoadedModManager.RunningModsListForReading.
             FirstOrDefault(m => m.assemblies.loadedAssemblies.Contains(asm));
         if (mod == null)
             return null;
 
-        // Same precedence the game uses when picking a versioned folder
         foreach (var folder in mod.foldersToLoadDescendingOrder)
         {
             var candidate = Path.Combine(folder, "Assemblies", name + ".dll");

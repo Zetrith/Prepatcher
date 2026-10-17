@@ -9,10 +9,6 @@ using Verse;
 
 namespace Prepatcher;
 
-// A loaded assembly can't be rewritten in place, and loading a patched copy alongside it
-// doesn't work on 1.7: the engine reads the map and camera out of Assembly-CSharp and binds to
-// the original before any mod runs, so it carries on drawing the world we replaced. Writing the
-// assembly out and restarting sidesteps that. One assembly, with the fields already in it.
 internal static class OnDisk
 {
     private const string CacheFolder = "PrepatcherCache";
@@ -26,7 +22,6 @@ internal static class OnDisk
         Path.Combine(Path.GetDirectoryName(typeof(Game).Assembly.Location)!,
             AssemblyCollector.AssemblyCSharp + ".dll");
 
-    // What the patched assemblies were built from. Anything here changing means they're stale.
     private static string CurrentStamp()
     {
         var sb = new StringBuilder();
@@ -65,8 +60,6 @@ internal static class OnDisk
         return File.Exists(stamp) && File.ReadAllText(stamp) == CurrentStamp();
     }
 
-    // Written when we install and cleared on the next start. It only tells us an install
-    // happened; reaching Prepatcher at all means the assemblies themselves loaded fine.
     internal static bool InstallPending => File.Exists(Path.Combine(CachePath, PendingFile));
 
     internal static void MarkStarted()
@@ -91,7 +84,6 @@ internal static class OnDisk
         }
     }
 
-    // Returns the mod assemblies that were patched, which still live beside the mods themselves
     internal static List<string> Install()
     {
         var installed = new List<string>();
@@ -123,9 +115,6 @@ internal static class OnDisk
     }
 
 
-    // The game has these files mapped while it runs, and writing over one corrupts the copy
-    // the process is using. Renaming a new file into place leaves the running process on the
-    // old one and gives the next launch the new one.
     private static void Replace(string source, string target)
     {
         var staged = target + ".new";

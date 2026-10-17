@@ -19,7 +19,6 @@ internal static class AssemblyCollector
                 Select(asmPath => ($"(System) {Path.GetFileName(asmPath)}", asmPath));
     }
 
-    // 1.7 keeps its assemblies in the game root instead of a Managed folder
     private static string SystemAssemblyFolder()
     {
         var gameAsmPath = typeof(Game).Assembly.Location;
@@ -29,7 +28,6 @@ internal static class AssemblyCollector
         return Path.Combine(Application.dataPath, Util.ManagedFolderOS());
     }
 
-    // Returns null when the file isn't a managed assembly
     internal static string? TryGetAssemblyName(string path)
     {
         try

@@ -5,10 +5,6 @@ using HarmonyLib;
 
 namespace Prepatcher;
 
-// Harmony 3 rejects a patch whose injected parameter types don't match the method, where 2.x
-// passed the object across unchecked. The rejection throws out of the whole PatchAll, taking
-// the other patches in the class and the mod that triggered it along with it. Only the author
-// can fix the patch itself, so it stays unapplied either way, but the rest can keep working.
 internal static class PatchFailureTolerancePatch
 {
     internal static void Apply(Harmony harmony)

@@ -48,9 +48,6 @@ internal static class Loader
         Find.Root.StartCoroutine(ShowLogConsole());
     }
 
-    // Rewrite everything and write it out, but keep running on the stock assemblies. The game
-    // has to restart to pick the new ones up; swapping to them in process is what breaks the
-    // renderer.
     private static AssemblySet BuildAssemblySet()
     {
         var set = new AssemblySet();
@@ -136,9 +133,6 @@ internal static class Loader
 
         if (SharedAssemblies.Contains(asmName))
         {
-            // Harmony holds global patch state and hands generic types to everything that
-            // patches, so a second copy breaks MonoMod. It never references Assembly-CSharp
-            // and so doesn't need rebinding anyway.
             loadedAssembly = AppDomain.CurrentDomain.GetAssemblies().
                 First(a => a.GetName().Name == asmName);
             PatchedAssemblyLoadContext.Instance.Share(asmName, loadedAssembly);
@@ -155,8 +149,6 @@ internal static class Loader
             AppDomain.CurrentDomain.AssemblyResolve += (_, _) => loadedAssembly;
         }
 
-        // Always keep a copy of what we produced, so it can be tried on disk instead of
-        // being loaded alongside the original.
         if (asm.Modified && asm.Bytes != null)
         {
             try
@@ -198,9 +190,6 @@ internal static class Loader
         Workshop.installedCallback?.Unregister();
     }
 
-    // 1.7 holds materials in a static queue until defs load. That queue lives in UnityStubs,
-    // which isn't reloaded, so anything queued by the load we just stopped would survive into
-    // the restart and fail to resolve against the patched defs.
     private static void ClearPendingDeferredMaterials()
     {
         var pendingField = AccessTools.Field(typeof(Material), "PendingDeferredMaterials");
@@ -219,8 +208,6 @@ internal static class Loader
     {
         Lg.Verbose("Clearing AppDomain.AssemblyResolve");
 
-        // Mono keeps the handlers on AppDomain. Off Mono it only forwards to a static field
-        // on AssemblyLoadContext, and the one left on AppDomain is the reflection-only pair.
         var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
         object? resolveTarget = AppDomain.CurrentDomain;
 
