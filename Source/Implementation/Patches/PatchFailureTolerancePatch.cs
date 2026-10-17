@@ -5,13 +5,10 @@ using HarmonyLib;
 
 namespace Prepatcher;
 
-// Harmony 3 rejects a patch whose injected parameter types don't line up with the method it
-// patches, where 2.x passed the object across unchecked. The rejection throws out of the whole
-// PatchAll, so one bad patch takes down every other patch in the same class and whichever mod
-// happened to trigger the patching dies with it.
-//
-// Letting the bad patch fail on its own keeps the rest of the mod working. The patch itself is
-// genuinely wrong and only its author can fix it, so it stays unapplied either way.
+// Harmony 3 rejects a patch whose injected parameter types don't match the method, where 2.x
+// passed the object across unchecked. The rejection throws out of the whole PatchAll, taking
+// the other patches in the class and the mod that triggered it along with it. Only the author
+// can fix the patch itself, so it stays unapplied either way, but the rest can keep working.
 internal static class PatchFailureTolerancePatch
 {
     internal static void Apply(Harmony harmony)
@@ -47,7 +44,6 @@ internal static class PatchFailureTolerancePatch
         if (Reported.Add(description))
             Lg.Error($"Skipping patches from {description}, the rest of the mod is unaffected: {__exception.Message}");
 
-        // A null result reads as "nothing was patched", which is what happened
         __result = null;
         return null;
     }
@@ -66,7 +62,6 @@ internal static class PatchFailureTolerancePatch
         }
         catch
         {
-            // Best effort only
         }
 
         return processor.GetType().Name;

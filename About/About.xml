@@ -20,13 +20,13 @@
   <loadBefore>
     <li>Ludeon.RimWorld</li>
   </loadBefore>
-  <description>Prepatcher updated for 1.7. All Zetrith's work, I just fixed what the new runtime broke.
+  <description>Zetrith's Prepatcher, patched up for 1.7. Work in progress, don't subscribe expecting it to just work.
 
-Unsubscribe the original first. They share a mod id and you'll get errors with both.
+What's done: it reads assemblies off disk instead of out of Mono, finds them in the game root, parks the loading thread instead of aborting it, and no longer bundles Harmony, so get the Harmony mod and let it load above this one.
 
-Harmony isn't bundled anymore. Subscribe to Harmony and let it load above this.
+What isn't: 1.7's engine reads the map and camera straight out of Assembly-CSharp and binds to it before any mod loads, so once Prepatcher swaps in its patched copy the game renders a black map. Everything else runs, the sim is fine, you just can't see it. Patching the assembly on disk instead works, but that needs a restart and regenerating whenever the mod list changes, and I haven't built that properly yet.
 
-Haven't tested it on a big modlist yet. Report anything broken here, not to Zetrith.
+Also makes a failed Harmony patch skip itself instead of taking the whole mod down with it. Harmony 3 is stricter than 2.x and a fair few mods trip it.
 
-If he wants it down, or puts out his own 1.7 build, just say so and I'll remove it.</description>
+All Zetrith's work, I only fixed what 1.7 broke. If he wants this down or puts out his own build, say so and I'll remove it.</description>
 </ModMetaData>

@@ -80,8 +80,6 @@ internal static class Loader
                 addedAsm.ProcessAttributes = true;
         }
 
-        Lg.Info($"Assembly set: {set.AllAssemblies.Count} total, CozyRainMod present: {set.HasAssembly("CozyRainMod")}, LunarFramework present: {set.HasAssembly("LunarFramework")}");
-
         using (StopwatchScope.Measure("Game processing"))
             GameProcessing.Process(set);
 
@@ -101,7 +99,7 @@ internal static class Loader
                 Application.logMessageReceivedThreaded -= Log.Notify_MessageReceivedThreadedInternal;
                 UnregisterWorkshopCallbacks();
                 ClearAssemblyResolve();
-                // ClearPendingDeferredMaterials();   // testing: does dropping these blank the map?
+                ClearPendingDeferredMaterials();
             }
         );
     }

@@ -85,8 +85,7 @@ public class AssemblySet
             if (found != null)
                 return found.AsmDefinition;
 
-            // 1.7 folded the Unity assemblies into UnityStubs and redirects the old names onto
-            // it at runtime, so mods still referencing them resolve to nothing here otherwise.
+            // 1.7 folded the Unity assemblies into UnityStubs and redirects the old names
             if (RedirectsToStubs(name.Name))
                 return processor.FindAssembly(UnityStubs)?.AsmDefinition;
 

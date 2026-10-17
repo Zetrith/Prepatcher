@@ -8,13 +8,10 @@ using Verse;
 
 namespace Prepatcher;
 
-// Mods that look their patch target up by name get whichever copy loaded first, which is the
-// superseded original. They then patch a method on that, while their own parameter types
-// resolve to the patched assembly, and Harmony refuses to bind one to the other because the
-// two classes really are unrelated despite sharing a name.
-//
-// Mono never hit this: the originals are reflection-only there and drop out of the search.
-// Nothing hides a loaded assembly off Mono, so redirect the lookup instead.
+// A by-name lookup returns whichever copy loaded first, which is the superseded original, so
+// the mod patches a method on that while its own parameter types resolve to the patched
+// assembly and Harmony won't bind the two. Mono drops the originals out of the search because
+// they're reflection-only; nothing hides a loaded assembly off Mono, so redirect the result.
 internal static class TypeByNamePatch
 {
     internal static void Apply()
@@ -34,8 +31,7 @@ internal static class TypeByNamePatch
         harmony.Patch(target, postfix: new HarmonyMethod(typeof(TypeByNamePatch), nameof(RedirectToPatched)));
         Lg.Verbose("Redirecting AccessTools.TypeByName to the patched assemblies");
 
-        // The game resolves class names out of XML the same way, so it can hand back a type
-        // from a superseded assembly whose base class is the old game assembly's.
+        // Class names out of XML resolve the same way and land on the same problem
         var assemblies = AccessTools.PropertyGetter(typeof(GenTypes), nameof(GenTypes.AllActiveAssemblies));
         if (assemblies == null)
         {
@@ -46,8 +42,7 @@ internal static class TypeByNamePatch
         harmony.Patch(assemblies, postfix: new HarmonyMethod(typeof(TypeByNamePatch), nameof(DropSuperseded)));
         Lg.Verbose("Filtering superseded assemblies out of GenTypes");
 
-        // The game's own by-name lookup finds types through its own cached search rather than
-        // the list above, so redirect what it returns instead of what it searches.
+        // These search their own cache rather than the list above, so fix up the result
         foreach (var lookup in new[] { nameof(GenTypes.GetTypeInAnyAssembly), "GetTypeInAnyAssemblyInt", "GetTypeInAnyAssemblyRaw" })
         {
             var method = AccessTools.Method(typeof(GenTypes), lookup);
@@ -64,9 +59,6 @@ internal static class TypeByNamePatch
         // Anything already resolved was found before the redirects went on
         GenTypes.ClearCache();
 
-        Lg.Info($"Patched assembly registry holds {DataStore.PatchedAssemblies.Count} entries");
-        foreach (var probe in new[] { "CozyRainMod", "SC_Filth_Reducer", "LunarFramework" })
-            Lg.Info($"  registry has {probe}: {DataStore.PatchedAssemblies.ContainsKey(probe)}");
     }
 
     private static void DropSuperseded(ref IEnumerable<Assembly> __result)

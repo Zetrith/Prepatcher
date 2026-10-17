@@ -5,11 +5,10 @@ using System.Runtime.Loader;
 
 namespace Prepatcher;
 
-// Mono makes the superseded assemblies reflection-only so references from the patched ones
-// can't bind back to them. There's no such thing off Mono, where the originals stay loadable
-// and win by name, which would leave a patched mod bound to the original Assembly-CSharp.
-// Loading the patched set into its own context makes those references resolve to each other.
-// Anything else returns null here and still comes from the default context.
+// Mono marks the superseded assemblies reflection-only so the patched ones can't bind back to
+// them. Off Mono the originals stay loadable and win by name, which would leave a patched mod
+// bound to the original Assembly-CSharp. Loading the patched set into its own context makes
+// their references resolve to each other; anything else falls through to the default context.
 internal class PatchedAssemblyLoadContext : AssemblyLoadContext
 {
     internal static readonly PatchedAssemblyLoadContext Instance = new();

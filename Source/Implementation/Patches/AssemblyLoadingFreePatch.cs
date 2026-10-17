@@ -9,9 +9,10 @@ using Verse;
 
 namespace Prepatcher;
 
+// Only needed for the in-process reload, and an on-disk assembly must not call back
+// into PrepatcherImpl, which isn't loaded yet when mod content loads.
 public static class AssemblyLoadingFreePatch
 {
-    // [FreePatch]  // disabled: on-disk assembly must not reference PrepatcherImpl
     static void ReplaceAssemblyLoading(ModuleDefinition module)
     {
         var type = module.GetType($"{nameof(Verse)}.{nameof(ModAssemblyHandler)}");
@@ -50,10 +51,9 @@ public static class AssemblyLoadingFreePatch
 
         var rawAssembly = File.ReadAllBytes(filePath);
 
-        // Not in the patched set. Handing back an already loaded copy would leave it bound to
-        // the original Assembly-CSharp, and its types then don't match the ones the patched
-        // game is running. Anything referencing the game assembly goes into the patched
-        // context instead. Assemblies that don't touch it can be shared as they are.
+        // Handing back an already loaded copy would leave it bound to the original
+        // Assembly-CSharp, so anything referencing the game assembly goes into the patched
+        // context. The rest don't touch game types and can be shared as they are.
         if (ReferencesGameAssembly(rawAssembly))
         {
             Lg.Verbose($"Loading {asmName.Name} into the patched context");
