@@ -48,10 +48,11 @@ internal static class Loader
         Find.Root.StartCoroutine(ShowLogConsole());
     }
 
-    private static void DoReload()
+    // Rewrite everything and write it out, but keep running on the stock assemblies. The game
+    // has to restart to pick the new ones up; swapping to them in process is what breaks the
+    // renderer.
+    private static AssemblySet BuildAssemblySet()
     {
-        origAsm = typeof(Game).Assembly;
-
         var set = new AssemblySet();
         set.AddAssembly("RimWorld", AssemblyCollector.AssemblyCSharp, null, typeof(Game).Assembly);
 
@@ -80,6 +81,26 @@ internal static class Loader
                 addedAsm.ProcessAttributes = true;
         }
 
+        return set;
+    }
+
+    internal static void GenerateToDisk()
+    {
+        var set = BuildAssemblySet();
+
+        using (StopwatchScope.Measure("Game processing"))
+            GameProcessing.Process(set);
+
+        Lg.Info("Writing patched assemblies");
+        using (StopwatchScope.Measure("Writing"))
+            OnDisk.Write(set);
+    }
+
+    private static void DoReload()
+    {
+        origAsm = typeof(Game).Assembly;
+
+        var set = BuildAssemblySet();
         using (StopwatchScope.Measure("Game processing"))
             GameProcessing.Process(set);
 
