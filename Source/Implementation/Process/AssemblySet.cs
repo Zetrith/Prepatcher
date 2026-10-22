@@ -81,7 +81,26 @@ public class AssemblySet
 
         public AssemblyDefinition? Resolve(AssemblyNameReference name)
         {
-            return processor.FindAssembly(name.Name)?.AsmDefinition;
+            var found = processor.FindAssembly(name.Name);
+            if (found != null)
+                return found.AsmDefinition;
+
+            if (RedirectsToStubs(name.Name))
+                return processor.FindAssembly(UnityStubs)?.AsmDefinition;
+
+            return null;
+        }
+
+        private const string UnityStubs = "UnityStubs";
+
+        private static bool RedirectsToStubs(string name)
+        {
+            if (name == "Unity.Newtonsoft.Json")
+                return false;
+
+            return name.StartsWith("UnityEngine")
+                   || name.StartsWith("Unity.")
+                   || name == "Assembly-CSharp-firstpass";
         }
 
         public AssemblyDefinition? Resolve(AssemblyNameReference name, ReaderParameters parameters)

@@ -1,24 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <ModMetaData>
   <packageId>zetrith.prepatcher</packageId>
-  <name>Prepatcher</name>
+  <name>Prepatcher (1.7)</name>
   <supportedVersions>
-    <li>1.4</li>
-    <li>1.5</li>
-	<li>1.6</li>
+    <li>1.7</li>
   </supportedVersions>
-  <author>Zetrith</author>
+  <author>Zetrith, 1.7 port by Ren</author>
   <url>https://github.com/Zetrith/Prepatcher</url>
+  <modDependencies>
+    <li>
+      <packageId>brrainz.harmony</packageId>
+      <displayName>Harmony</displayName>
+      <steamWorkshopUrl>steam://url/CommunityFilePage/2009463077</steamWorkshopUrl>
+    </li>
+  </modDependencies>
+  <loadAfter>
+    <li>brrainz.harmony</li>
+  </loadAfter>
   <loadBefore>
-	<li>Ludeon.RimWorld</li>
-	<li>brrainz.harmony</li>
+    <li>Ludeon.RimWorld</li>
   </loadBefore>
-  <description>Prepatcher is a powerful library for mod developers and a mod manager.
-  
-Includes Harmony v2.4.2 and PrepatcherAPI v1.2.0
+  <description>Prepatcher updated for 1.7. All Zetrith's work, I just fixed the parts the new engine broke.
 
-The version for RimWorld 1.5 includes Harmony v2.3.3 and PrepatcherAPI v1.2.0
+Unsubscribe the original first, they share a mod id.
 
-The version for RimWorld 1.4 includes Harmony v2.2.2 and PrepatcherAPI v1.2.0
-</description>
+Harmony isn't bundled anymore. Get the Harmony mod and load it above this.
+
+If a mod has a patch Harmony 3 won't accept, that patch gets skipped and logged instead of breaking the whole mod.
+
+If Zetrith wants this taken down or releases his own 1.7 version, let me know and I'll remove it.</description>
 </ModMetaData>

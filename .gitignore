@@ -353,3 +353,5 @@ MigrationBackup/
 
 Prepatcher/
 Prepatcher*.zip
+deploy.sh
+ISSUE-1.7.md

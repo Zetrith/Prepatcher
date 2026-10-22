@@ -1,7 +1,10 @@
 ﻿using System.Collections;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
+using DataAssembly;
 using HarmonyLib;
 using LudeonTK;
 using Prepatcher.Process;
@@ -54,7 +57,8 @@ internal static class Loader
 
         foreach (var (friendlyName, path) in AssemblyCollector.SystemAssemblyPaths())
         {
-            if (AssemblyName.GetAssemblyName(path).Name == AssemblyCollector.AssemblyCSharp)
+            var systemAsmName = AssemblyCollector.TryGetAssemblyName(path);
+            if (systemAsmName == null || systemAsmName == AssemblyCollector.AssemblyCSharp)
                 continue;
 
             var addedAsm = set.AddAssembly("System", friendlyName, path, null);
@@ -95,15 +99,34 @@ internal static class Loader
                 Application.logMessageReceivedThreaded -= Log.Notify_MessageReceivedThreadedInternal;
                 UnregisterWorkshopCallbacks();
                 ClearAssemblyResolve();
+                ClearPendingDeferredMaterials();
             }
         );
+
+        EngineRebindPatch.Apply(new Harmony("prepatcher.enginerebind"), origAsm, newAsm);
     }
+
+    private static readonly HashSet<string> SharedAssemblies = new() { "0Harmony" };
 
     private static void LoadAssembly(ModifiableAssembly asm)
     {
         Lg.Verbose($"Loading assembly: {asm}");
 
-        var loadedAssembly = Assembly.Load(asm.Bytes);
+        var asmName = asm.AsmDefinition.Name.Name;
+        Assembly loadedAssembly;
+
+        if (SharedAssemblies.Contains(asmName))
+        {
+            loadedAssembly = AppDomain.CurrentDomain.GetAssemblies().
+                First(a => a.GetName().Name == asmName);
+            PatchedAssemblyLoadContext.Instance.Share(asmName, loadedAssembly);
+        }
+        else
+        {
+            loadedAssembly = PatchedAssemblyLoadContext.Instance.LoadPatched(asm.Bytes!);
+        }
+        DataStore.PatchedAssemblies[loadedAssembly.GetName().Name!] = loadedAssembly;
+
         if (loadedAssembly.GetName().Name == AssemblyCollector.AssemblyCSharp)
         {
             newAsm = loadedAssembly;
@@ -137,17 +160,47 @@ internal static class Loader
         Workshop.installedCallback?.Unregister();
     }
 
+    private static void ClearPendingDeferredMaterials()
+    {
+        var pendingField = AccessTools.Field(typeof(Material), "PendingDeferredMaterials");
+        if (pendingField?.GetValue(null) is not IList pending)
+            return;
+
+        var resolveLock = AccessTools.Field(typeof(Material), "DeferredResolveLock")?.GetValue(null);
+        if (resolveLock == null)
+            return;
+
+        lock (resolveLock)
+            pending.Clear();
+    }
+
     private static void ClearAssemblyResolve()
     {
         Lg.Verbose("Clearing AppDomain.AssemblyResolve");
 
         var asmResolve = AccessTools.Field(typeof(AppDomain), "AssemblyResolve");
-        var del = (Delegate)asmResolve.GetValue(AppDomain.CurrentDomain);
+        object? resolveTarget = AppDomain.CurrentDomain;
+
+        if (asmResolve == null)
+        {
+            asmResolve = AccessTools.Field(typeof(AssemblyLoadContext), "AssemblyResolve");
+            resolveTarget = null;
+        }
+
+        if (asmResolve == null)
+        {
+            Lg.Error("Couldn't find the AssemblyResolve backing field");
+            return;
+        }
+
+        var del = (Delegate?)asmResolve.GetValue(resolveTarget);
+        if (del == null)
+            return;
 
         // Handle MonoMod's internal dynamic assemblies
         foreach (var d in del.GetInvocationList().ToList())
         {
-            if (d!.Method.DeclaringType!.Namespace!.StartsWith("MonoMod.Utils"))
+            if (d!.Method.DeclaringType?.Namespace?.StartsWith("MonoMod.Utils") == true)
             {
                 foreach (var f in AccessTools.GetDeclaredFields(d.Method.DeclaringType))
                 {
@@ -160,6 +213,6 @@ internal static class Loader
             }
         }
 
-        asmResolve.SetValue(AppDomain.CurrentDomain, null);
+        asmResolve.SetValue(resolveTarget, null);
     }
 }

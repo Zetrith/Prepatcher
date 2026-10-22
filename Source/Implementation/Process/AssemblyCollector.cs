@@ -15,8 +15,29 @@ internal static class AssemblyCollector
     {
         // Collect System and Unity assemblies
         return
-            Directory.GetFiles(Path.Combine(Application.dataPath, Util.ManagedFolderOS()), "*.dll").
+            Directory.GetFiles(SystemAssemblyFolder(), "*.dll").
                 Select(asmPath => ($"(System) {Path.GetFileName(asmPath)}", asmPath));
+    }
+
+    private static string SystemAssemblyFolder()
+    {
+        var gameAsmPath = typeof(Game).Assembly.Location;
+        if (!string.IsNullOrEmpty(gameAsmPath) && File.Exists(gameAsmPath))
+            return Path.GetDirectoryName(gameAsmPath)!;
+
+        return Path.Combine(Application.dataPath, Util.ManagedFolderOS());
+    }
+
+    internal static string? TryGetAssemblyName(string path)
+    {
+        try
+        {
+            return AssemblyName.GetAssemblyName(path).Name;
+        }
+        catch (BadImageFormatException)
+        {
+            return null;
+        }
     }
 
     internal static IEnumerable<(string, string, Assembly)> ModAssemblies()

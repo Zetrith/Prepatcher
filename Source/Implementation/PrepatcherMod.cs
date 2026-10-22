@@ -1,5 +1,7 @@
-﻿using System.Threading;
+﻿using System.IO;
+using System.Threading;
 using DataAssembly;
+using HarmonyLib;
 using UnityEngine;
 using Verse;
 
@@ -30,6 +32,8 @@ internal class PrepatcherMod : Mod
                 return null;
             };
 
+            TypeByNamePatch.Apply();
+
             Lg.Info($"Restarted with the patched assembly, going silent.");
             return;
         }
@@ -45,7 +49,14 @@ internal class PrepatcherMod : Mod
         // Thread abortion counts as a crash
         Prefs.data.resetModsConfigOnCrash = false;
 
-        Thread.CurrentThread.Abort();
+        if (UnsafeAssembly.IsMonoRuntime)
+        {
+            Thread.CurrentThread.Abort();
+        }
+        else
+        {
+            Thread.Sleep(Timeout.Infinite);
+        }
     }
 
     private static void InitLg()

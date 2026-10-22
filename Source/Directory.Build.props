@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <RimWorldDir Condition="'$(RimWorldDir)'==''">$(HOME)/.local/share/Steam/steamapps/common/RimWorld</RimWorldDir>
+    <WorkshopDir Condition="'$(WorkshopDir)'==''">$(HOME)/.local/share/Steam/steamapps/workshop/content/294100</WorkshopDir>
+    <HarmonyDll Condition="'$(HarmonyDll)'==''">$(WorkshopDir)/2009463077/1.7/Assemblies/0Harmony.dll</HarmonyDll>
+  </PropertyGroup>
+</Project>

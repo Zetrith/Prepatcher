@@ -29,6 +29,9 @@ internal static partial class HarmonyPatches
 
     private static void InitVersionedDataPostfix(ModMetaData.ModMetaDataInternal __instance)
     {
+        if (__instance.packageId?.ToLowerInvariant() == PrepatcherMod.PrepatcherModId)
+            return;
+
         if (__instance.loadAfter.Any(s => s.ToLowerInvariant() == PrepatcherMod.HarmonyModId) &&
             !__instance.loadAfter.Any(s => s.ToLowerInvariant() == PrepatcherMod.PrepatcherModId))
             __instance.loadAfter.Add(PrepatcherMod.PrepatcherModId);

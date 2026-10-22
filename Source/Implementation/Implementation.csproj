@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net472</TargetFramework>
+        <TargetFramework>net10.0</TargetFramework>
         <LangVersion>10.0</LangVersion>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -20,13 +20,11 @@
 
     <!-- Nuget dependencies -->
     <PackageReference Include="Krafs.Publicizer" Version="2.3.0" />
-    <PackageReference Include="Lib.Harmony" Version="2.4.2" />
-    <PackageReference Include="Krafs.Rimworld.Ref" Version="1.6.4633" />
 
   </ItemGroup>
 
   <ItemGroup>
-    <Publicize Include="UnityEngine.CoreModule;UnityEngine.UIElementsModule;Assembly-CSharp;0Harmony" />
+    <Publicize Include="Assembly-CSharp;UnityStubs;0Harmony" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,6 +39,25 @@
     <ProjectReference Include="..\API\API.csproj" />
     <ProjectReference Include="..\DataAssembly\DataAssembly.csproj" />
     <ProjectReference Include="..\Prestarter\Prestarter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(RimWorldDir)/Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityStubs">
+      <HintPath>$(RimWorldDir)/UnityStubs.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>$(RimWorldDir)/com.rlabrecque.steamworks.net.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(HarmonyDll)</HintPath>
+      <Private>false</Private>
+    </Reference>
   </ItemGroup>
 
 </Project>

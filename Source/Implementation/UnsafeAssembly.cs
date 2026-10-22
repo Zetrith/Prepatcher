@@ -1,14 +1,18 @@
 ﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using HarmonyLib;
+using Verse;
 
 namespace Prepatcher;
 
 internal class UnsafeAssembly
 {
     private static readonly FieldInfo? MonoAssemblyField = AccessTools.Field(AccessTools.TypeByName("System.Reflection.RuntimeAssembly"), "_mono_assembly");
+
+    internal static bool IsMonoRuntime => MonoAssemblyField != null;
 
     private static List<Assembly> refOnly = new();
 
@@ -43,7 +47,7 @@ internal class UnsafeAssembly
     internal static unsafe byte[] GetRawData(Assembly asm)
     {
         if (MonoAssemblyField == null)
-            throw new Exception("Not available on non-Mono runtime");
+            return GetRawDataFromDisk(asm);
 
         var image = *(long*)((IntPtr)MonoAssemblyField.GetValue(asm) + 0x60);
         var rawData = *(long*)((IntPtr)image + 0x10);
@@ -53,5 +57,35 @@ internal class UnsafeAssembly
         Marshal.Copy((IntPtr)rawData, arr, 0, (int)rawDataLength);
 
         return arr;
+    }
+
+    private static byte[] GetRawDataFromDisk(Assembly asm)
+    {
+        var path = FindAssemblyFile(asm);
+        if (path == null)
+            throw new Exception($"Couldn't find a file on disk for assembly {asm.GetName().Name}");
+
+        return File.ReadAllBytes(path);
+    }
+
+    private static string? FindAssemblyFile(Assembly asm)
+    {
+        if (!string.IsNullOrEmpty(asm.Location) && File.Exists(asm.Location))
+            return asm.Location;
+
+        var name = asm.GetName().Name;
+        var mod = LoadedModManager.RunningModsListForReading.
+            FirstOrDefault(m => m.assemblies.loadedAssemblies.Contains(asm));
+        if (mod == null)
+            return null;
+
+        foreach (var folder in mod.foldersToLoadDescendingOrder)
+        {
+            var candidate = Path.Combine(folder, "Assemblies", name + ".dll");
+            if (File.Exists(candidate))
+                return candidate;
+        }
+
+        return null;
     }
 }
